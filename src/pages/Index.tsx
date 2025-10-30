@@ -1,93 +1,265 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { RoomCard } from "@/components/RoomCard";
-import { Calendar, Users } from "lucide-react";
+import { Loader2, CalendarDays, Users, Clock, LogOut, Shield } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
+import type { Session } from "@supabase/supabase-js";
 
 const Index = () => {
-  const { data: rooms, isLoading } = useQuery({
+  const navigate = useNavigate();
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .single()
+        .then(({ data }) => {
+          setIsAdmin(data?.role === "admin");
+        });
+    } else {
+      setIsAdmin(false);
+    }
+  }, [session]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
+  const { data: rooms, isLoading: roomsLoading } = useQuery({
     queryKey: ["rooms"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rooms")
         .select("*")
         .order("name");
-      
+
       if (error) throw error;
       return data;
     },
   });
 
-  const { data: bookings } = useQuery({
+  const { data: bookings, isLoading: bookingsLoading } = useQuery({
     queryKey: ["bookings"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("*, rooms(name), squads(name)")
+        .select(
+          `
+          *,
+          room:rooms(name, color),
+          squad:squads(name)
+        `
+        )
         .gte("end_time", new Date().toISOString())
         .order("start_time");
-      
+
       if (error) throw error;
       return data;
     },
   });
 
-  if (isLoading) {
+  if (roomsLoading || bookingsLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading rooms...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      <div className="container mx-auto px-4 py-8">
+        <header className="mb-12">
+          <div className="flex justify-between items-center mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-                <Calendar className="w-8 h-8 text-primary" />
+              <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 Room Booking
               </h1>
-              <p className="text-muted-foreground mt-1">Select a room to view availability and book</p>
+              <p className="text-muted-foreground text-lg max-w-2xl">
+                Select a room to view details and make a booking
+              </p>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="w-4 h-4" />
-              <span>10 Squads</span>
+            <div className="flex gap-2">
+              {session ? (
+                <>
+                  {isAdmin && (
+                    <Button onClick={() => navigate("/admin")} variant="outline" className="gap-2">
+                      <Shield className="w-4 h-4" />
+                      Admin Panel
+                    </Button>
+                  )}
+                  <Button onClick={handleSignOut} variant="outline" className="gap-2">
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => navigate("/auth")}>Sign In</Button>
+              )}
             </div>
           </div>
-        </div>
-      </header>
-
-      {/* Rooms Grid */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-3 gap-6">
-          {rooms?.map((room) => (
-            <RoomCard key={room.id} room={room} bookings={bookings} />
-          ))}
-        </div>
+        </header>
 
         {/* Quick Stats */}
-        <div className="mt-12 grid md:grid-cols-3 gap-4">
-          <div className="bg-card border rounded-lg p-6">
-            <div className="text-2xl font-bold text-foreground">{rooms?.length || 0}</div>
-            <div className="text-sm text-muted-foreground">Total Rooms</div>
-          </div>
-          <div className="bg-card border rounded-lg p-6">
-            <div className="text-2xl font-bold text-foreground">
-              {bookings?.filter(b => new Date(b.start_time) <= new Date() && new Date(b.end_time) >= new Date()).length || 0}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="bg-card rounded-xl shadow-lg p-6 border border-primary/10">
+            <div className="flex items-center gap-4">
+              <div className="bg-primary/10 p-3 rounded-lg">
+                <CalendarDays className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Rooms</p>
+                <p className="text-2xl font-bold">{rooms?.length || 0}</p>
+              </div>
             </div>
-            <div className="text-sm text-muted-foreground">Currently Active</div>
           </div>
-          <div className="bg-card border rounded-lg p-6">
-            <div className="text-2xl font-bold text-foreground">
-              {bookings?.filter(b => new Date(b.start_time) > new Date()).length || 0}
+
+          <div className="bg-card rounded-xl shadow-lg p-6 border border-success/10">
+            <div className="flex items-center gap-4">
+              <div className="bg-success/10 p-3 rounded-lg">
+                <Users className="w-6 h-6 text-success" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Active Bookings</p>
+                <p className="text-2xl font-bold">
+                  {bookings?.filter(
+                    (b: any) =>
+                      new Date(b.start_time) <= new Date() &&
+                      new Date(b.end_time) >= new Date()
+                  ).length || 0}
+                </p>
+              </div>
             </div>
-            <div className="text-sm text-muted-foreground">Upcoming Bookings</div>
+          </div>
+
+          <div className="bg-card rounded-xl shadow-lg p-6 border border-warning/10">
+            <div className="flex items-center gap-4">
+              <div className="bg-warning/10 p-3 rounded-lg">
+                <Clock className="w-6 h-6 text-warning" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Upcoming</p>
+                <p className="text-2xl font-bold">
+                  {bookings?.filter(
+                    (b: any) => new Date(b.start_time) > new Date()
+                  ).length || 0}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </main>
+
+        {/* Rooms Grid */}
+        <section className="mb-12">
+          <h2 className="text-3xl font-bold mb-6">Available Rooms</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {rooms?.map((room: any) => {
+              const roomBookings = bookings?.filter(
+                (booking: any) => booking.room_id === room.id
+              );
+              return (
+                <RoomCard
+                  key={room.id}
+                  room={room}
+                  bookings={roomBookings || []}
+                />
+              );
+            })}
+          </div>
+        </section>
+
+        {/* All Bookings Table */}
+        <section className="mb-12">
+          <h2 className="text-3xl font-bold mb-6">All Bookings</h2>
+          <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Room</TableHead>
+                  <TableHead>Squad</TableHead>
+                  <TableHead>Start Time</TableHead>
+                  <TableHead>End Time</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bookings && bookings.length > 0 ? (
+                  bookings.map((booking: any) => {
+                    const now = new Date();
+                    const startTime = new Date(booking.start_time);
+                    const endTime = new Date(booking.end_time);
+                    const isActive = startTime <= now && endTime >= now;
+                    const isUpcoming = startTime > now;
+
+                    return (
+                      <TableRow key={booking.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: booking.room?.color }}
+                            />
+                            <span className="font-medium">{booking.room?.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{booking.squad?.name}</TableCell>
+                        <TableCell>
+                          {format(startTime, "MMM dd, yyyy HH:mm")}
+                        </TableCell>
+                        <TableCell>
+                          {format(endTime, "MMM dd, yyyy HH:mm")}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              isActive
+                                ? "bg-success/10 text-success"
+                                : isUpcoming
+                                ? "bg-warning/10 text-warning"
+                                : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {isActive ? "Active" : isUpcoming ? "Upcoming" : "Past"}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      No bookings yet
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+      </div>
     </div>
   );
 };
