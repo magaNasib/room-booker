@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RoomsManager } from "@/components/admin/RoomsManager";
-import { SquadsManager } from "@/components/admin/SquadsManager";
+import { BookingsManager } from "@/components/admin/BookingsManager";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -63,22 +63,22 @@ const Admin = () => {
             Admin Panel
           </h1>
           <p className="text-muted-foreground mt-2">
-            Manage rooms and squads
+            Manage rooms and bookings
           </p>
         </div>
 
         <Tabs defaultValue="rooms" className="space-y-6">
           <TabsList>
             <TabsTrigger value="rooms">Rooms</TabsTrigger>
-            <TabsTrigger value="squads">Squads</TabsTrigger>
+            <TabsTrigger value="bookings">Bookings</TabsTrigger>
           </TabsList>
           
           <TabsContent value="rooms">
             <RoomsManager />
           </TabsContent>
           
-          <TabsContent value="squads">
-            <SquadsManager />
+          <TabsContent value="bookings">
+            <BookingsManager />
           </TabsContent>
         </Tabs>
       </div>

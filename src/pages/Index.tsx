@@ -69,8 +69,7 @@ const Index = () => {
         .select(
           `
           *,
-          room:rooms(name, color),
-          squad:squads(name)
+          room:rooms(name, color)
         `
         )
         .gte("end_time", new Date().toISOString())
@@ -99,7 +98,7 @@ const Index = () => {
                 Room Booking
               </h1>
               <p className="text-muted-foreground text-lg max-w-2xl">
-                Select a room to view details and make a booking
+                View available rooms and current bookings. Only admins can create bookings.
               </p>
             </div>
             <div className="flex gap-2">
@@ -199,7 +198,7 @@ const Index = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Room</TableHead>
-                  <TableHead>Squad</TableHead>
+                  <TableHead>Booker</TableHead>
                   <TableHead>Start Time</TableHead>
                   <TableHead>End Time</TableHead>
                   <TableHead>Status</TableHead>
@@ -225,7 +224,7 @@ const Index = () => {
                             <span className="font-medium">{booking.room?.name}</span>
                           </div>
                         </TableCell>
-                        <TableCell>{booking.booker_name || booking.squad?.name || "—"}</TableCell>
+                        <TableCell>{booking.booker_name || "—"}</TableCell>
                         <TableCell>
                           {format(startTime, "MMM dd, yyyy HH:mm")}
                         </TableCell>

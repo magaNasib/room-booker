@@ -1,12 +1,9 @@
 import { useParams, Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Calendar, QrCode } from "lucide-react";
-import { BookingForm } from "@/components/BookingForm";
-import { BookingsList } from "@/components/BookingsList";
-import { toast } from "sonner";
 import { useEffect, useRef } from "react";
 import QRCode from "qrcode";
 
@@ -34,7 +31,7 @@ const RoomDetail = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("*, squads(name)")
+        .select("*")
         .eq("room_id", roomId)
         .gte("end_time", new Date().toISOString())
         .order("start_time");
@@ -75,46 +72,6 @@ const RoomDetail = () => {
       supabase.removeChannel(channel);
     };
   }, [roomId, queryClient]);
-
-  const createBooking = useMutation({
-    mutationFn: async (booking: { booker_name: string; start_time: string; end_time: string }) => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .insert([{ room_id: roomId, ...booking }])
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["room-bookings", roomId] });
-      queryClient.invalidateQueries({ queryKey: ["bookings"] });
-      toast.success("Room booked successfully!");
-    },
-    onError: (error) => {
-      toast.error("Failed to book room: " + error.message);
-    },
-  });
-
-  const deleteBooking = useMutation({
-    mutationFn: async (bookingId: string) => {
-      const { error } = await supabase
-        .from("bookings")
-        .delete()
-        .eq("id", bookingId);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["room-bookings", roomId] });
-      queryClient.invalidateQueries({ queryKey: ["bookings"] });
-      toast.success("Booking cancelled successfully!");
-    },
-    onError: (error) => {
-      toast.error("Failed to cancel booking: " + error.message);
-    },
-  });
 
   if (roomLoading || bookingsLoading) {
     return (
@@ -159,33 +116,37 @@ const RoomDetail = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Booking Form */}
+          {/* Bookings List */}
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                 <CardTitle className="flex items-center gap-2">
-                   <Calendar className="w-5 h-5" />
-                   Book This Room
-                 </CardTitle>
-                 <CardDescription>
-                   Enter your name and select a time slot to make a booking
-                 </CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Upcoming Bookings
+                </CardTitle>
+                <CardDescription>
+                  View all bookings for this room. Only admins can create bookings.
+                </CardDescription>
               </CardHeader>
-               <CardContent>
-                 <BookingForm
-                   existingBookings={bookings || []}
-                   onSubmit={(data) => createBooking.mutate(data)}
-                   isLoading={createBooking.isPending}
-                 />
-               </CardContent>
+              <CardContent>
+                {bookings && bookings.length > 0 ? (
+                  <div className="space-y-2">
+                    {bookings.map((booking) => (
+                      <div key={booking.id} className="flex justify-between items-center p-3 border rounded-lg">
+                        <div>
+                          <p className="font-medium">{booking.booker_name || "Anonymous"}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(booking.start_time).toLocaleString()} - {new Date(booking.end_time).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">No upcoming bookings</p>
+                )}
+              </CardContent>
             </Card>
-
-            {/* Bookings List */}
-            <BookingsList
-              bookings={bookings || []}
-              onDelete={(id) => deleteBooking.mutate(id)}
-              isDeleting={deleteBooking.isPending}
-            />
           </div>
 
           {/* QR Code Sidebar */}
