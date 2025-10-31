@@ -225,7 +225,7 @@ const Index = () => {
                             <span className="font-medium">{booking.room?.name}</span>
                           </div>
                         </TableCell>
-                        <TableCell>{booking.squad?.name}</TableCell>
+                        <TableCell>{booking.booker_name || booking.squad?.name || "—"}</TableCell>
                         <TableCell>
                           {format(startTime, "MMM dd, yyyy HH:mm")}
                         </TableCell>

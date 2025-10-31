@@ -44,18 +44,6 @@ const RoomDetail = () => {
     },
   });
 
-  const { data: squads } = useQuery({
-    queryKey: ["squads"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("squads")
-        .select("*")
-        .order("name");
-      
-      if (error) throw error;
-      return data;
-    },
-  });
 
   // Generate QR code
   useEffect(() => {
@@ -89,7 +77,7 @@ const RoomDetail = () => {
   }, [roomId, queryClient]);
 
   const createBooking = useMutation({
-    mutationFn: async (booking: { squad_id: string; start_time: string; end_time: string }) => {
+    mutationFn: async (booking: { booker_name: string; start_time: string; end_time: string }) => {
       const { data, error } = await supabase
         .from("bookings")
         .insert([{ room_id: roomId, ...booking }])
@@ -175,22 +163,21 @@ const RoomDetail = () => {
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Book This Room
-                </CardTitle>
-                <CardDescription>
-                  Select your squad and time slot to make a booking
-                </CardDescription>
+                 <CardTitle className="flex items-center gap-2">
+                   <Calendar className="w-5 h-5" />
+                   Book This Room
+                 </CardTitle>
+                 <CardDescription>
+                   Enter your name and select a time slot to make a booking
+                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <BookingForm
-                  squads={squads || []}
-                  existingBookings={bookings || []}
-                  onSubmit={(data) => createBooking.mutate(data)}
-                  isLoading={createBooking.isPending}
-                />
-              </CardContent>
+               <CardContent>
+                 <BookingForm
+                   existingBookings={bookings || []}
+                   onSubmit={(data) => createBooking.mutate(data)}
+                   isLoading={createBooking.isPending}
+                 />
+               </CardContent>
             </Card>
 
             {/* Bookings List */}

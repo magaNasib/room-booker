@@ -8,7 +8,8 @@ interface Booking {
   id: string;
   start_time: string;
   end_time: string;
-  squads: {
+  booker_name: string | null;
+  squads?: {
     name: string;
   } | null;
 }
@@ -45,7 +46,7 @@ export const BookingsList = ({ bookings, onDelete, isDeleting }: BookingsListPro
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-medium">{activeBooking.squads?.name}</span>
+                  <span className="font-medium">{activeBooking.booker_name || activeBooking.squads?.name || "Unknown"}</span>
                 </div>
                 <Button
                   variant="ghost"
@@ -83,7 +84,7 @@ export const BookingsList = ({ bookings, onDelete, isDeleting }: BookingsListPro
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium">{booking.squads?.name}</span>
+                      <span className="font-medium">{booking.booker_name || booking.squads?.name || "Unknown"}</span>
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {format(new Date(booking.start_time), "MMM d, h:mm a")} -{" "}

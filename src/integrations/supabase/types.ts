@@ -16,27 +16,30 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          booker_name: string | null
           created_at: string
           end_time: string
           id: string
           room_id: string
-          squad_id: string
+          squad_id: string | null
           start_time: string
         }
         Insert: {
+          booker_name?: string | null
           created_at?: string
           end_time: string
           id?: string
           room_id: string
-          squad_id: string
+          squad_id?: string | null
           start_time: string
         }
         Update: {
+          booker_name?: string | null
           created_at?: string
           end_time?: string
           id?: string
           room_id?: string
-          squad_id?: string
+          squad_id?: string | null
           start_time?: string
         }
         Relationships: [
