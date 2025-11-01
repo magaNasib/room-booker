@@ -6,6 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft, Calendar, QrCode } from "lucide-react";
 import { useEffect, useRef } from "react";
 import QRCode from "qrcode";
+import { format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+
+const TIMEZONE = "Asia/Baku";
 
 const RoomDetail = () => {
   const { roomId } = useParams<{ roomId: string }>();
@@ -136,7 +140,7 @@ const RoomDetail = () => {
                         <div>
                           <p className="font-medium">{booking.booker_name || "Anonymous"}</p>
                           <p className="text-sm text-muted-foreground">
-                            {new Date(booking.start_time).toLocaleString()} - {new Date(booking.end_time).toLocaleString()}
+                            {format(toZonedTime(new Date(booking.start_time), TIMEZONE), "MMM d, yyyy h:mm a")} - {format(toZonedTime(new Date(booking.end_time), TIMEZONE), "h:mm a")}
                           </p>
                         </div>
                       </div>

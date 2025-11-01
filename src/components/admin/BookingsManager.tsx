@@ -7,9 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Plus } from "lucide-react";
-import { format } from "date-fns";
+import { format, addDays, addWeeks, startOfWeek, isBefore, isAfter, isSameDay } from "date-fns";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
+
+const TIMEZONE = "Asia/Baku";
 
 export const BookingsManager = () => {
   const [roomId, setRoomId] = useState("");
@@ -18,6 +22,9 @@ export const BookingsManager = () => {
   const [startTime, setStartTime] = useState("");
   const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringEndDate, setRecurringEndDate] = useState("");
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -50,15 +57,61 @@ export const BookingsManager = () => {
 
   const addBooking = useMutation({
     mutationFn: async () => {
-      const startDateTime = `${startDate}T${startTime}:00`;
-      const endDateTime = `${endDate}T${endTime}:00`;
+      const bookingsToCreate = [];
 
-      const { error } = await supabase.from("bookings").insert({
-        room_id: roomId,
-        booker_name: bookerName,
-        start_time: startDateTime,
-        end_time: endDateTime,
-      });
+      if (isRecurring && selectedDays.length > 0 && recurringEndDate) {
+        // Create recurring bookings
+        const rangeStart = new Date(startDate);
+        const rangeEnd = new Date(recurringEndDate);
+
+        let currentDate = new Date(rangeStart);
+        while (isBefore(currentDate, rangeEnd) || isSameDay(currentDate, rangeEnd)) {
+          if (selectedDays.includes(currentDate.getDay())) {
+            // Create booking for this day
+            const bookingStartDate = new Date(currentDate);
+            const [startHour, startMinute] = startTime.split(":");
+            bookingStartDate.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
+
+            const bookingEndDate = new Date(currentDate);
+            const [endHour, endMinute] = endTime.split(":");
+            bookingEndDate.setHours(parseInt(endHour), parseInt(endMinute), 0, 0);
+
+            // Convert to UTC from Azerbaijan timezone
+            const startUTC = fromZonedTime(bookingStartDate, TIMEZONE);
+            const endUTC = fromZonedTime(bookingEndDate, TIMEZONE);
+
+            bookingsToCreate.push({
+              room_id: roomId,
+              booker_name: bookerName,
+              start_time: startUTC.toISOString(),
+              end_time: endUTC.toISOString(),
+            });
+          }
+          currentDate = addDays(currentDate, 1);
+        }
+      } else {
+        // Create single booking
+        const bookingStartDate = new Date(startDate);
+        const [startHour, startMinute] = startTime.split(":");
+        bookingStartDate.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
+
+        const bookingEndDate = new Date(endDate);
+        const [endHour, endMinute] = endTime.split(":");
+        bookingEndDate.setHours(parseInt(endHour), parseInt(endMinute), 0, 0);
+
+        // Convert to UTC from Azerbaijan timezone
+        const startUTC = fromZonedTime(bookingStartDate, TIMEZONE);
+        const endUTC = fromZonedTime(bookingEndDate, TIMEZONE);
+
+        bookingsToCreate.push({
+          room_id: roomId,
+          booker_name: bookerName,
+          start_time: startUTC.toISOString(),
+          end_time: endUTC.toISOString(),
+        });
+      }
+
+      const { error } = await supabase.from("bookings").insert(bookingsToCreate);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -70,7 +123,10 @@ export const BookingsManager = () => {
       setStartTime("");
       setEndDate("");
       setEndTime("");
-      toast({ title: "Booking created successfully" });
+      setIsRecurring(false);
+      setRecurringEndDate("");
+      setSelectedDays([]);
+      toast({ title: isRecurring ? "Recurring bookings created successfully" : "Booking created successfully" });
     },
     onError: (error: any) => {
       toast({
@@ -142,9 +198,61 @@ export const BookingsManager = () => {
               />
             </div>
 
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="recurring"
+                  checked={isRecurring}
+                  onCheckedChange={(checked) => setIsRecurring(checked as boolean)}
+                />
+                <Label htmlFor="recurring" className="cursor-pointer">
+                  Create recurring weekly bookings
+                </Label>
+              </div>
+            </div>
+
+            {isRecurring && (
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                <div className="space-y-2">
+                  <Label>Select Days of Week</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`day-${index}`}
+                          checked={selectedDays.includes(index)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedDays([...selectedDays, index]);
+                            } else {
+                              setSelectedDays(selectedDays.filter((d) => d !== index));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`day-${index}`} className="cursor-pointer">
+                          {day}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="recurring-end-date">Recurring Until</Label>
+                  <Input
+                    id="recurring-end-date"
+                    type="date"
+                    value={recurringEndDate}
+                    onChange={(e) => setRecurringEndDate(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="start-date">Start Date</Label>
+                <Label htmlFor="start-date">{isRecurring ? "First Booking Date" : "Start Date"}</Label>
                 <Input
                   id="start-date"
                   type="date"
@@ -165,19 +273,34 @@ export const BookingsManager = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="end-date">End Date</Label>
-                <Input
-                  id="end-date"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  required
-                />
+            {!isRecurring && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="end-date">End Date</Label>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="end-time">End Time</Label>
+                  <Input
+                    id="end-time"
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
+            )}
+
+            {isRecurring && (
               <div className="space-y-2">
-                <Label htmlFor="end-time">End Time</Label>
+                <Label htmlFor="end-time">End Time (same day)</Label>
                 <Input
                   id="end-time"
                   type="time"
@@ -186,7 +309,7 @@ export const BookingsManager = () => {
                   required
                 />
               </div>
-            </div>
+            )}
 
             <Button type="submit" disabled={addBooking.isPending} className="gap-2">
               <Plus className="w-4 h-4" />
@@ -230,10 +353,10 @@ export const BookingsManager = () => {
                       </TableCell>
                       <TableCell>{booking.booker_name || "—"}</TableCell>
                       <TableCell>
-                        {format(new Date(booking.start_time), "MMM d, yyyy HH:mm")}
+                        {format(toZonedTime(new Date(booking.start_time), TIMEZONE), "MMM d, yyyy HH:mm")}
                       </TableCell>
                       <TableCell>
-                        {format(new Date(booking.end_time), "MMM d, yyyy HH:mm")}
+                        {format(toZonedTime(new Date(booking.end_time), TIMEZONE), "MMM d, yyyy HH:mm")}
                       </TableCell>
                       <TableCell>
                         <Button

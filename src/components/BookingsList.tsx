@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Users, Trash2, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
+
+const TIMEZONE = "Asia/Baku";
 
 interface Booking {
   id: string;
@@ -58,8 +61,8 @@ export const BookingsList = ({ bookings, onDelete, isDeleting }: BookingsListPro
                 </Button>
               </div>
               <div className="text-sm text-muted-foreground">
-                {format(new Date(activeBooking.start_time), "h:mm a")} -{" "}
-                {format(new Date(activeBooking.end_time), "h:mm a")}
+                {format(toZonedTime(new Date(activeBooking.start_time), TIMEZONE), "h:mm a")} -{" "}
+                {format(toZonedTime(new Date(activeBooking.end_time), TIMEZONE), "h:mm a")}
               </div>
             </div>
           </CardContent>
@@ -87,8 +90,8 @@ export const BookingsList = ({ bookings, onDelete, isDeleting }: BookingsListPro
                       <span className="font-medium">{booking.booker_name || booking.squads?.name || "Unknown"}</span>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {format(new Date(booking.start_time), "MMM d, h:mm a")} -{" "}
-                      {format(new Date(booking.end_time), "h:mm a")}
+                      {format(toZonedTime(new Date(booking.start_time), TIMEZONE), "MMM d, h:mm a")} -{" "}
+                      {format(toZonedTime(new Date(booking.end_time), TIMEZONE), "h:mm a")}
                     </div>
                   </div>
                   <Button
