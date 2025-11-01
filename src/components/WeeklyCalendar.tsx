@@ -1,6 +1,9 @@
-import { format, startOfWeek, addDays, isSameDay } from "date-fns";
+import { useState } from "react";
+import { format, startOfWeek, addDays, addWeeks, isSameDay } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const TIMEZONE = "Asia/Baku";
 
@@ -17,9 +20,15 @@ interface WeeklyCalendarProps {
 }
 
 export const WeeklyCalendar = ({ bookings, currentDate = new Date() }: WeeklyCalendarProps) => {
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Start on Monday
+  const [weekOffset, setWeekOffset] = useState(0);
+  const currentWeek = addWeeks(currentDate, weekOffset);
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Start on Monday
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const hours = Array.from({ length: 12 }, (_, i) => i + 8); // 8:00 to 19:00
+
+  const goToPreviousWeek = () => setWeekOffset(weekOffset - 1);
+  const goToNextWeek = () => setWeekOffset(weekOffset + 1);
+  const goToCurrentWeek = () => setWeekOffset(0);
 
   const getBookingsForDayAndHour = (day: Date, hour: number) => {
     return bookings.filter((booking) => {
@@ -52,7 +61,39 @@ export const WeeklyCalendar = ({ bookings, currentDate = new Date() }: WeeklyCal
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Weekly Schedule</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Weekly Schedule</CardTitle>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToPreviousWeek}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToCurrentWeek}
+              disabled={weekOffset === 0}
+              className="h-8"
+            >
+              Today
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToNextWeek}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">
+          {format(days[0], "MMM d")} - {format(days[6], "MMM d, yyyy")}
+        </p>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <div className="min-w-[800px]">

@@ -1,13 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { RoomCard } from "@/components/RoomCard";
-import { Loader2, CalendarDays, Users, Clock, LogOut, Shield } from "lucide-react";
+import { Loader2, CalendarDays, Users, Clock, LogOut, Shield, Repeat } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
+import { format, isSameDay } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import type { Session } from "@supabase/supabase-js";
+
+const TIMEZONE = "Asia/Baku";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -76,7 +80,55 @@ const Index = () => {
         .order("start_time");
 
       if (error) throw error;
-      return data;
+      
+      // Group recurring bookings
+      const grouped: any[] = [];
+      const processed = new Set<string>();
+      
+      data?.forEach((booking) => {
+        if (processed.has(booking.id)) return;
+        
+        // Find similar bookings (same room, booker, time)
+        const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
+        const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
+        const timeKey = `${startTime.getHours()}:${startTime.getMinutes()}-${endTime.getHours()}:${endTime.getMinutes()}`;
+        
+        const similarBookings = data.filter((b) => {
+          const bStart = toZonedTime(new Date(b.start_time), TIMEZONE);
+          const bEnd = toZonedTime(new Date(b.end_time), TIMEZONE);
+          const bTimeKey = `${bStart.getHours()}:${bStart.getMinutes()}-${bEnd.getHours()}:${bEnd.getMinutes()}`;
+          
+          return (
+            b.room_id === booking.room_id &&
+            b.booker_name === booking.booker_name &&
+            bTimeKey === timeKey
+          );
+        });
+        
+        if (similarBookings.length > 3) {
+          // This is a recurring series - get unique weekdays
+          const weekdays = new Set<number>();
+          similarBookings.forEach((b) => {
+            const date = toZonedTime(new Date(b.start_time), TIMEZONE);
+            weekdays.add(date.getDay());
+          });
+          
+          grouped.push({
+            ...booking,
+            isRecurring: true,
+            recurringCount: similarBookings.length,
+            weekdays: Array.from(weekdays).sort(),
+            start_time: similarBookings[0].start_time,
+            end_time: similarBookings[similarBookings.length - 1].end_time,
+          });
+          similarBookings.forEach((b) => processed.add(b.id));
+        } else {
+          grouped.push(booking);
+          processed.add(booking.id);
+        }
+      });
+      
+      return grouped;
     },
   });
 
@@ -199,8 +251,8 @@ const Index = () => {
                 <TableRow>
                   <TableHead>Room</TableHead>
                   <TableHead>Booker</TableHead>
-                  <TableHead>Start Time</TableHead>
-                  <TableHead>End Time</TableHead>
+                  <TableHead>Schedule</TableHead>
+                  <TableHead>Time</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -210,8 +262,10 @@ const Index = () => {
                     const now = new Date();
                     const startTime = new Date(booking.start_time);
                     const endTime = new Date(booking.end_time);
-                    const isActive = startTime <= now && endTime >= now;
+                    const isActive = !booking.isRecurring && startTime <= now && endTime >= now;
                     const isUpcoming = startTime > now;
+                    
+                    const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
                     return (
                       <TableRow key={booking.id}>
@@ -224,24 +278,57 @@ const Index = () => {
                             <span className="font-medium">{booking.room?.name}</span>
                           </div>
                         </TableCell>
-                        <TableCell>{booking.booker_name || "—"}</TableCell>
                         <TableCell>
-                          {format(startTime, "MMM dd, yyyy HH:mm")}
+                          <div className="flex items-center gap-2">
+                            {booking.booker_name || "—"}
+                            {booking.isRecurring && (
+                              <Badge variant="secondary" className="gap-1">
+                                <Repeat className="w-3 h-3" />
+                                {booking.recurringCount}
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
-                          {format(endTime, "MMM dd, yyyy HH:mm")}
+                          {booking.isRecurring ? (
+                            <div className="flex flex-wrap gap-1">
+                              {booking.weekdays.map((day: number) => (
+                                <Badge key={day} variant="outline" className="text-xs">
+                                  {weekdayNames[day]}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-sm">
+                              {format(startTime, "MMM dd, yyyy")}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {booking.isRecurring ? (
+                            <div>
+                              {format(toZonedTime(new Date(booking.start_time), TIMEZONE), "HH:mm")} -{" "}
+                              {format(toZonedTime(new Date(booking.start_time), TIMEZONE).setHours(
+                                toZonedTime(new Date(booking.start_time), TIMEZONE).getHours() + 1
+                              ), "HH:mm")}
+                            </div>
+                          ) : (
+                            <div>
+                              {format(startTime, "HH:mm")} - {format(endTime, "HH:mm")}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-medium ${
                               isActive
                                 ? "bg-success/10 text-success"
-                                : isUpcoming
+                                : isUpcoming || booking.isRecurring
                                 ? "bg-warning/10 text-warning"
                                 : "bg-muted text-muted-foreground"
                             }`}
                           >
-                            {isActive ? "Active" : isUpcoming ? "Upcoming" : "Past"}
+                            {isActive ? "Active" : (isUpcoming || booking.isRecurring) ? "Upcoming" : "Past"}
                           </span>
                         </TableCell>
                       </TableRow>
