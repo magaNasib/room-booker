@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Calendar, QrCode } from "lucide-react";
+import { WeeklyCalendar } from "@/components/WeeklyCalendar";
 import { useEffect, useRef } from "react";
 import QRCode from "qrcode";
 import { format } from "date-fns";
@@ -120,37 +121,9 @@ const RoomDetail = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Bookings List */}
+          {/* Weekly Calendar View */}
           <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  Upcoming Bookings
-                </CardTitle>
-                <CardDescription>
-                  View all bookings for this room. Only admins can create bookings.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {bookings && bookings.length > 0 ? (
-                  <div className="space-y-2">
-                    {bookings.map((booking) => (
-                      <div key={booking.id} className="flex justify-between items-center p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{booking.booker_name || "Anonymous"}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(toZonedTime(new Date(booking.start_time), TIMEZONE), "MMM d, yyyy h:mm a")} - {format(toZonedTime(new Date(booking.end_time), TIMEZONE), "h:mm a")}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-center py-8">No upcoming bookings</p>
-                )}
-              </CardContent>
-            </Card>
+            <WeeklyCalendar bookings={bookings || []} />
           </div>
 
           {/* QR Code Sidebar */}

@@ -8,8 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Repeat } from "lucide-react";
 import { format, addDays, addWeeks, startOfWeek, isBefore, isAfter, isSameDay } from "date-fns";
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
 
@@ -49,9 +50,50 @@ export const BookingsManager = () => {
           *,
           rooms (name, color)
         `)
-        .order("start_time", { ascending: false });
+        .gte("start_time", new Date().toISOString())
+        .order("start_time", { ascending: true });
       if (error) throw error;
-      return data;
+      
+      // Group recurring bookings
+      const grouped: any[] = [];
+      const processed = new Set<string>();
+      
+      data?.forEach((booking) => {
+        if (processed.has(booking.id)) return;
+        
+        // Find similar bookings (same room, booker, time)
+        const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
+        const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
+        const timeKey = `${startTime.getHours()}:${startTime.getMinutes()}-${endTime.getHours()}:${endTime.getMinutes()}`;
+        
+        const similarBookings = data.filter((b) => {
+          const bStart = toZonedTime(new Date(b.start_time), TIMEZONE);
+          const bEnd = toZonedTime(new Date(b.end_time), TIMEZONE);
+          const bTimeKey = `${bStart.getHours()}:${bStart.getMinutes()}-${bEnd.getHours()}:${bEnd.getMinutes()}`;
+          
+          return (
+            b.room_id === booking.room_id &&
+            b.booker_name === booking.booker_name &&
+            bTimeKey === timeKey
+          );
+        });
+        
+        if (similarBookings.length > 3) {
+          // This is a recurring series
+          grouped.push({
+            ...booking,
+            isRecurring: true,
+            recurringCount: similarBookings.length,
+            recurringIds: similarBookings.map((b) => b.id),
+          });
+          similarBookings.forEach((b) => processed.add(b.id));
+        } else {
+          grouped.push(booking);
+          processed.add(booking.id);
+        }
+      });
+      
+      return grouped;
     },
   });
 
@@ -138,14 +180,15 @@ export const BookingsManager = () => {
   });
 
   const deleteBooking = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("bookings").delete().eq("id", id);
+    mutationFn: async (ids: string | string[]) => {
+      const idsToDelete = Array.isArray(ids) ? ids : [ids];
+      const { error } = await supabase.from("bookings").delete().in("id", idsToDelete);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-bookings"] });
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
-      toast({ title: "Booking deleted successfully" });
+      toast({ title: "Booking(s) deleted successfully" });
     },
     onError: (error: any) => {
       toast({
@@ -321,8 +364,8 @@ export const BookingsManager = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Bookings</CardTitle>
-          <CardDescription>Manage all room bookings</CardDescription>
+          <CardTitle>Upcoming Bookings</CardTitle>
+          <CardDescription>Manage upcoming room bookings</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -351,19 +394,34 @@ export const BookingsManager = () => {
                           <span className="font-medium">{booking.rooms?.name}</span>
                         </div>
                       </TableCell>
-                      <TableCell>{booking.booker_name || "—"}</TableCell>
                       <TableCell>
-                        {format(toZonedTime(new Date(booking.start_time), TIMEZONE), "MMM d, yyyy HH:mm")}
+                        <div className="flex items-center gap-2">
+                          {booking.booker_name || "—"}
+                          {booking.isRecurring && (
+                            <Badge variant="secondary" className="gap-1 text-xs">
+                              <Repeat className="w-3 h-3" />
+                              {booking.recurringCount}x
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        {format(toZonedTime(new Date(booking.end_time), TIMEZONE), "MMM d, yyyy HH:mm")}
+                        {format(toZonedTime(new Date(booking.start_time), TIMEZONE), "MMM d, HH:mm")}
+                      </TableCell>
+                      <TableCell>
+                        {booking.isRecurring ? (
+                          <span className="text-muted-foreground">Weekly series</span>
+                        ) : (
+                          format(toZonedTime(new Date(booking.end_time), TIMEZONE), "MMM d, HH:mm")
+                        )}
                       </TableCell>
                       <TableCell>
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => deleteBooking.mutate(booking.id)}
+                          onClick={() => deleteBooking.mutate(booking.recurringIds || booking.id)}
                           disabled={deleteBooking.isPending}
+                          title={booking.isRecurring ? "Delete all recurring bookings" : "Delete booking"}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -373,7 +431,7 @@ export const BookingsManager = () => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      No bookings yet
+                      No upcoming bookings
                     </TableCell>
                   </TableRow>
                 )}
