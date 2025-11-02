@@ -79,12 +79,22 @@ export const BookingsManager = () => {
         });
         
         if (similarBookings.length > 3) {
+          // Get unique weekdays
+          const weekdays = new Set<number>();
+          similarBookings.forEach((b) => {
+            const date = toZonedTime(new Date(b.start_time), TIMEZONE);
+            weekdays.add(date.getDay());
+          });
+          
           // This is a recurring series
           grouped.push({
             ...booking,
             isRecurring: true,
             recurringCount: similarBookings.length,
             recurringIds: similarBookings.map((b) => b.id),
+            weekdays: Array.from(weekdays).sort(),
+            start_time: similarBookings[0].start_time,
+            end_time: similarBookings[similarBookings.length - 1].end_time,
           });
           similarBookings.forEach((b) => processed.add(b.id));
         } else {
@@ -171,9 +181,12 @@ export const BookingsManager = () => {
       toast({ title: isRecurring ? "Recurring bookings created successfully" : "Booking created successfully" });
     },
     onError: (error: any) => {
+      const message = error.message.includes("overlaps") 
+        ? "This time slot is already booked. Please choose a different time."
+        : error.message;
       toast({
         title: "Error creating booking",
-        description: error.message,
+        description: message,
         variant: "destructive",
       });
     },
@@ -376,61 +389,82 @@ export const BookingsManager = () => {
                 <TableRow>
                   <TableHead>Room</TableHead>
                   <TableHead>Booker</TableHead>
+                  <TableHead>Schedule</TableHead>
                   <TableHead>Start Time</TableHead>
-                  <TableHead>End Time</TableHead>
+                  <TableHead>End Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {bookings && bookings.length > 0 ? (
-                  bookings.map((booking) => (
-                    <TableRow key={booking.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3 rounded"
-                            style={{ backgroundColor: booking.rooms?.color }}
-                          />
-                          <span className="font-medium">{booking.rooms?.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {booking.booker_name || "—"}
-                          {booking.isRecurring && (
-                            <Badge variant="secondary" className="gap-1 text-xs">
-                              <Repeat className="w-3 h-3" />
-                              {booking.recurringCount}x
-                            </Badge>
+                  bookings.map((booking) => {
+                    const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                    const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
+                    const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
+                    
+                    return (
+                      <TableRow 
+                        key={booking.id}
+                        className={booking.isRecurring ? "bg-primary/5" : ""}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded"
+                              style={{ backgroundColor: booking.rooms?.color }}
+                            />
+                            <span className="font-medium">{booking.rooms?.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {booking.booker_name || "—"}
+                            {booking.isRecurring && (
+                              <Badge variant="secondary" className="gap-1 text-xs">
+                                <Repeat className="w-3 h-3" />
+                                {booking.recurringCount}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {booking.isRecurring ? (
+                            <div className="flex flex-wrap gap-1">
+                              {booking.weekdays.map((day: number) => (
+                                <Badge key={day} variant="outline" className="text-xs">
+                                  {weekdayNames[day]}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              {format(startTime, "MMM dd")}
+                            </span>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {format(toZonedTime(new Date(booking.start_time), TIMEZONE), "MMM d, HH:mm")}
-                      </TableCell>
-                      <TableCell>
-                        {booking.isRecurring ? (
-                          <span className="text-muted-foreground">Weekly series</span>
-                        ) : (
-                          format(toZonedTime(new Date(booking.end_time), TIMEZONE), "MMM d, HH:mm")
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deleteBooking.mutate(booking.recurringIds || booking.id)}
-                          disabled={deleteBooking.isPending}
-                          title={booking.isRecurring ? "Delete all recurring bookings" : "Delete booking"}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell>
+                          {format(startTime, "MMM d, HH:mm")}
+                        </TableCell>
+                        <TableCell>
+                          {format(endTime, "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteBooking.mutate(booking.recurringIds || booking.id)}
+                            disabled={deleteBooking.isPending}
+                            title={booking.isRecurring ? "Delete all recurring bookings" : "Delete booking"}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                       No upcoming bookings
                     </TableCell>
                   </TableRow>
