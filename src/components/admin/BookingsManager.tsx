@@ -392,6 +392,7 @@ export const BookingsManager = () => {
                   <TableHead>Schedule</TableHead>
                   <TableHead>Start Time</TableHead>
                   <TableHead>End Date</TableHead>
+                  <TableHead>End Time</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -449,6 +450,9 @@ export const BookingsManager = () => {
                           {format(endTime, "MMM d, yyyy")}
                         </TableCell>
                         <TableCell>
+                          {format(endTime, "HH:mm")}
+                        </TableCell>
+                        <TableCell>
                           <Button
                             variant="destructive"
                             size="sm"
@@ -464,7 +468,7 @@ export const BookingsManager = () => {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       No upcoming bookings
                     </TableCell>
                   </TableRow>
