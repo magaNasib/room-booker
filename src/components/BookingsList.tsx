@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, Trash2, Calendar } from "lucide-react";
+import { Clock, Users, Trash2, Calendar, Repeat } from "lucide-react";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 
@@ -15,6 +15,9 @@ interface Booking {
   squads?: {
     name: string;
   } | null;
+  isRecurring?: boolean;
+  recurringCount?: number;
+  weekdays?: number[];
 }
 
 interface BookingsListProps {
@@ -79,31 +82,65 @@ export const BookingsList = ({ bookings, onDelete, isDeleting }: BookingsListPro
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {upcomingBookings.map((booking) => (
-                <div
-                  key={booking.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium">{booking.booker_name || booking.squads?.name || "Unknown"}</span>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {format(toZonedTime(new Date(booking.start_time), TIMEZONE), "MMM d, h:mm a")} -{" "}
-                      {format(toZonedTime(new Date(booking.end_time), TIMEZONE), "h:mm a")}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDelete(booking.id)}
-                    disabled={isDeleting}
+              {upcomingBookings.map((booking) => {
+                const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                const startDate = toZonedTime(new Date(booking.start_time), TIMEZONE);
+                const endDate = toZonedTime(new Date(booking.end_time), TIMEZONE);
+                
+                return (
+                  <div
+                    key={booking.id}
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+                      booking.isRecurring 
+                        ? "bg-primary/5 border-primary/20 hover:bg-primary/10" 
+                        : "bg-card hover:bg-accent/5"
+                    }`}
                   >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">{booking.booker_name || booking.squads?.name || "Unknown"}</span>
+                        {booking.isRecurring && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Repeat className="w-3 h-3" />
+                            {booking.recurringCount} sessions
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {booking.isRecurring ? (
+                        <>
+                          <div className="text-sm text-muted-foreground">
+                            {format(startDate, "MMM d")} - {format(endDate, "MMM d, yyyy")}
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {booking.weekdays?.map((day) => (
+                              <Badge key={day} variant="outline" className="text-xs">
+                                {weekdayNames[day]}
+                              </Badge>
+                            ))}
+                            <span className="text-sm text-muted-foreground ml-2">
+                              {format(startDate, "h:mm a")} - {format(endDate, "h:mm a")}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-sm text-muted-foreground">
+                          {format(startDate, "MMM d, h:mm a")} - {format(endDate, "MMM d, h:mm a")}
+                        </div>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(booking.id)}
+                      disabled={isDeleting}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

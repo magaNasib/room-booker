@@ -253,6 +253,7 @@ const Index = () => {
                   <TableHead>Booker</TableHead>
                   <TableHead>Schedule</TableHead>
                   <TableHead>Time</TableHead>
+                  <TableHead>End Date</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -318,6 +319,13 @@ const Index = () => {
                             </div>
                           )}
                         </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {booking.isRecurring ? (
+                            format(endTime, "MMM dd, yyyy")
+                          ) : (
+                            format(endTime, "MMM dd, yyyy")
+                          )}
+                        </TableCell>
                         <TableCell>
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -336,7 +344,7 @@ const Index = () => {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       No bookings yet
                     </TableCell>
                   </TableRow>
