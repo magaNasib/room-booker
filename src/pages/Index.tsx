@@ -1,11 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { RoomCard } from "@/components/RoomCard";
-import { Loader2, CalendarDays, Users, Clock, LogOut, Shield, Repeat, Search } from "lucide-react";
+import {
+  Loader2,
+  CalendarDays,
+  Users,
+  Clock,
+  LogOut,
+  Shield,
+  Repeat,
+  Search,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -83,31 +99,30 @@ const Index = () => {
         .order("start_time");
 
       if (error) throw error;
-      
-      // Group recurring bookings
+
       const grouped: any[] = [];
       const processed = new Set<string>();
-      
+
       data?.forEach((booking) => {
         if (processed.has(booking.id)) return;
-        
+
         // Find similar bookings (same room, booker, time)
         const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
         const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
         const timeKey = `${startTime.getHours()}:${startTime.getMinutes()}-${endTime.getHours()}:${endTime.getMinutes()}`;
-        
+
         const similarBookings = data.filter((b) => {
           const bStart = toZonedTime(new Date(b.start_time), TIMEZONE);
           const bEnd = toZonedTime(new Date(b.end_time), TIMEZONE);
           const bTimeKey = `${bStart.getHours()}:${bStart.getMinutes()}-${bEnd.getHours()}:${bEnd.getMinutes()}`;
-          
+
           return (
             b.room_id === booking.room_id &&
             b.booker_name === booking.booker_name &&
             bTimeKey === timeKey
           );
         });
-        
+
         if (similarBookings.length > 3) {
           // This is a recurring series - get unique weekdays
           const weekdays = new Set<number>();
@@ -115,7 +130,7 @@ const Index = () => {
             const date = toZonedTime(new Date(b.start_time), TIMEZONE);
             weekdays.add(date.getDay());
           });
-          
+
           grouped.push({
             ...booking,
             isRecurring: true,
@@ -130,7 +145,7 @@ const Index = () => {
           processed.add(booking.id);
         }
       });
-      
+
       return grouped;
     },
   });
@@ -153,19 +168,28 @@ const Index = () => {
                 Room Booking
               </h1>
               <p className="text-muted-foreground text-lg max-w-2xl">
-                View available rooms and current bookings. Only admins can create bookings.
+                View available rooms and current bookings. Only admins can
+                create bookings.
               </p>
             </div>
             <div className="flex gap-2">
               {session ? (
                 <>
                   {isAdmin && (
-                    <Button onClick={() => navigate("/admin")} variant="outline" className="gap-2">
+                    <Button
+                      onClick={() => navigate("/admin")}
+                      variant="outline"
+                      className="gap-2"
+                    >
                       <Shield className="w-4 h-4" />
                       Admin Panel
                     </Button>
                   )}
-                  <Button onClick={handleSignOut} variant="outline" className="gap-2">
+                  <Button
+                    onClick={handleSignOut}
+                    variant="outline"
+                    className="gap-2"
+                  >
                     <LogOut className="w-4 h-4" />
                     Sign Out
                   </Button>
@@ -283,9 +307,14 @@ const Index = () => {
                     <TableBody>
                       {bookings?.filter((b: any) => {
                         if (!b.isRecurring) {
-                          const matchesSearch = searchQuery.toLowerCase() === "" ||
-                            b.room?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                          const matchesSearch =
+                            searchQuery.toLowerCase() === "" ||
+                            b.room?.name
+                              ?.toLowerCase()
+                              .includes(searchQuery.toLowerCase()) ||
+                            b.booker_name
+                              ?.toLowerCase()
+                              .includes(searchQuery.toLowerCase());
                           return matchesSearch;
                         }
                         return false;
@@ -293,20 +322,39 @@ const Index = () => {
                         bookings
                           .filter((b: any) => {
                             if (!b.isRecurring) {
-                              const matchesSearch = searchQuery.toLowerCase() === "" ||
-                                b.room?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                              const matchesSearch =
+                                searchQuery.toLowerCase() === "" ||
+                                b.room?.name
+                                  ?.toLowerCase()
+                                  .includes(searchQuery.toLowerCase()) ||
+                                b.booker_name
+                                  ?.toLowerCase()
+                                  .includes(searchQuery.toLowerCase());
                               return matchesSearch;
                             }
                             return false;
                           })
                           .map((booking: any) => {
                             const now = new Date();
-                            const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
-                            const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
+                            const startTime = toZonedTime(
+                              new Date(booking.start_time),
+                              TIMEZONE
+                            );
+                            const endTime = toZonedTime(
+                              new Date(booking.end_time),
+                              TIMEZONE
+                            );
                             const isActive = startTime <= now && endTime >= now;
                             const isUpcoming = startTime > now;
-                            const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                            const weekdayNames = [
+                              "Sun",
+                              "Mon",
+                              "Tue",
+                              "Wed",
+                              "Thu",
+                              "Fri",
+                              "Sat",
+                            ];
 
                             return (
                               <TableRow key={booking.id}>
@@ -314,12 +362,18 @@ const Index = () => {
                                   <div className="flex items-center gap-2">
                                     <div
                                       className="w-3 h-3 rounded-full"
-                                      style={{ backgroundColor: booking.room?.color }}
+                                      style={{
+                                        backgroundColor: booking.room?.color,
+                                      }}
                                     />
-                                    <span className="font-medium">{booking.room?.name}</span>
+                                    <span className="font-medium">
+                                      {booking.room?.name}
+                                    </span>
                                   </div>
                                 </TableCell>
-                                <TableCell>{booking.booker_name || "—"}</TableCell>
+                                <TableCell>
+                                  {booking.booker_name || "—"}
+                                </TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className="text-xs">
                                     {weekdayNames[startTime.getDay()]}
@@ -341,7 +395,11 @@ const Index = () => {
                                         : "bg-muted text-muted-foreground"
                                     }`}
                                   >
-                                    {isActive ? "Active" : isUpcoming ? "Upcoming" : "Past"}
+                                    {isActive
+                                      ? "Active"
+                                      : isUpcoming
+                                      ? "Upcoming"
+                                      : "Past"}
                                   </span>
                                 </TableCell>
                               </TableRow>
@@ -349,7 +407,10 @@ const Index = () => {
                           })
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          <TableCell
+                            colSpan={6}
+                            className="text-center py-8 text-muted-foreground"
+                          >
                             No individual bookings found
                           </TableCell>
                         </TableRow>
@@ -375,9 +436,14 @@ const Index = () => {
                     <TableBody>
                       {bookings?.filter((b: any) => {
                         if (b.isRecurring) {
-                          const matchesSearch = searchQuery.toLowerCase() === "" ||
-                            b.room?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                          const matchesSearch =
+                            searchQuery.toLowerCase() === "" ||
+                            b.room?.name
+                              ?.toLowerCase()
+                              .includes(searchQuery.toLowerCase()) ||
+                            b.booker_name
+                              ?.toLowerCase()
+                              .includes(searchQuery.toLowerCase());
                           return matchesSearch;
                         }
                         return false;
@@ -385,41 +451,74 @@ const Index = () => {
                         bookings
                           .filter((b: any) => {
                             if (b.isRecurring) {
-                              const matchesSearch = searchQuery.toLowerCase() === "" ||
-                                b.room?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                              const matchesSearch =
+                                searchQuery.toLowerCase() === "" ||
+                                b.room?.name
+                                  ?.toLowerCase()
+                                  .includes(searchQuery.toLowerCase()) ||
+                                b.booker_name
+                                  ?.toLowerCase()
+                                  .includes(searchQuery.toLowerCase());
                               return matchesSearch;
                             }
                             return false;
                           })
                           .map((booking: any) => {
-                            const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                            const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
-                            const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
+                            const weekdayNames = [
+                              "Sun",
+                              "Mon",
+                              "Tue",
+                              "Wed",
+                              "Thu",
+                              "Fri",
+                              "Sat",
+                            ];
+                            const startTime = toZonedTime(
+                              new Date(booking.start_time),
+                              TIMEZONE
+                            );
+                            const endTime = toZonedTime(
+                              new Date(booking.end_time),
+                              TIMEZONE
+                            );
 
                             return (
-                              <TableRow key={booking.id} className="bg-primary/5">
+                              <TableRow
+                                key={booking.id}
+                                className="bg-primary/5"
+                              >
                                 <TableCell>
                                   <div className="flex items-center gap-2">
                                     <div
                                       className="w-3 h-3 rounded-full"
-                                      style={{ backgroundColor: booking.room?.color }}
+                                      style={{
+                                        backgroundColor: booking.room?.color,
+                                      }}
                                     />
-                                    <span className="font-medium">{booking.room?.name}</span>
+                                    <span className="font-medium">
+                                      {booking.room?.name}
+                                    </span>
                                   </div>
                                 </TableCell>
-                                <TableCell>{booking.booker_name || "—"}</TableCell>
+                                <TableCell>
+                                  {booking.booker_name || "—"}
+                                </TableCell>
                                 <TableCell>
                                   <div className="flex flex-wrap gap-1">
                                     {booking.weekdays?.map((day: number) => (
-                                      <Badge key={day} variant="outline" className="text-xs">
+                                      <Badge
+                                        key={day}
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
                                         {weekdayNames[day]}
                                       </Badge>
                                     ))}
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-sm">
-                                  {format(startTime, "HH:mm")} - {format(startTime, "HH:mm").split(':').map((v, i) => i === 0 ? String((parseInt(v) + 1) % 24).padStart(2, '0') : v).join(':')}
+                                  {format(startTime, "HH:mm")} -{" "}
+                                  {format(endTime, "HH:mm")}
                                 </TableCell>
                                 <TableCell className="text-sm">
                                   {format(endTime, "MMM d")}
@@ -435,7 +534,10 @@ const Index = () => {
                           })
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          <TableCell
+                            colSpan={6}
+                            className="text-center py-8 text-muted-foreground"
+                          >
                             No weekly series found
                           </TableCell>
                         </TableRow>

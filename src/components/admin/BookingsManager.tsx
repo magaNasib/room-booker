@@ -4,16 +4,53 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Plus, Repeat, Search } from "lucide-react";
-import { format, addDays, addWeeks, startOfWeek, isBefore, isAfter, isSameDay } from "date-fns";
+import {
+  format,
+  addDays,
+  addWeeks,
+  startOfWeek,
+  isBefore,
+  isAfter,
+  isSameDay,
+} from "date-fns";
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
 
 const TIMEZONE = "Asia/Baku";
@@ -49,38 +86,40 @@ export const BookingsManager = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select(`
+        .select(
+          `
           *,
           rooms (name, color)
-        `)
+        `
+        )
         .gte("start_time", new Date().toISOString())
         .order("start_time", { ascending: true });
       if (error) throw error;
-      
+
       // Group recurring bookings
       const grouped: any[] = [];
       const processed = new Set<string>();
-      
+
       data?.forEach((booking) => {
         if (processed.has(booking.id)) return;
-        
+
         // Find similar bookings (same room, booker, time)
         const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
         const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
         const timeKey = `${startTime.getHours()}:${startTime.getMinutes()}-${endTime.getHours()}:${endTime.getMinutes()}`;
-        
+
         const similarBookings = data.filter((b) => {
           const bStart = toZonedTime(new Date(b.start_time), TIMEZONE);
           const bEnd = toZonedTime(new Date(b.end_time), TIMEZONE);
           const bTimeKey = `${bStart.getHours()}:${bStart.getMinutes()}-${bEnd.getHours()}:${bEnd.getMinutes()}`;
-          
+
           return (
             b.room_id === booking.room_id &&
             b.booker_name === booking.booker_name &&
             bTimeKey === timeKey
           );
         });
-        
+
         if (similarBookings.length > 3) {
           // Get unique weekdays
           const weekdays = new Set<number>();
@@ -88,7 +127,7 @@ export const BookingsManager = () => {
             const date = toZonedTime(new Date(b.start_time), TIMEZONE);
             weekdays.add(date.getDay());
           });
-          
+
           // This is a recurring series
           grouped.push({
             ...booking,
@@ -105,7 +144,7 @@ export const BookingsManager = () => {
           processed.add(booking.id);
         }
       });
-      
+
       return grouped;
     },
   });
@@ -120,16 +159,29 @@ export const BookingsManager = () => {
         const rangeEnd = new Date(recurringEndDate);
 
         let currentDate = new Date(rangeStart);
-        while (isBefore(currentDate, rangeEnd) || isSameDay(currentDate, rangeEnd)) {
+        while (
+          isBefore(currentDate, rangeEnd) ||
+          isSameDay(currentDate, rangeEnd)
+        ) {
           if (selectedDays.includes(currentDate.getDay())) {
             // Create booking for this day
             const bookingStartDate = new Date(currentDate);
             const [startHour, startMinute] = startTime.split(":");
-            bookingStartDate.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
+            bookingStartDate.setHours(
+              parseInt(startHour),
+              parseInt(startMinute),
+              0,
+              0
+            );
 
             const bookingEndDate = new Date(currentDate);
             const [endHour, endMinute] = endTime.split(":");
-            bookingEndDate.setHours(parseInt(endHour), parseInt(endMinute), 0, 0);
+            bookingEndDate.setHours(
+              parseInt(endHour),
+              parseInt(endMinute),
+              0,
+              0
+            );
 
             // Convert to UTC from Azerbaijan timezone
             const startUTC = fromZonedTime(bookingStartDate, TIMEZONE);
@@ -148,7 +200,12 @@ export const BookingsManager = () => {
         // Create single booking
         const bookingStartDate = new Date(startDate);
         const [startHour, startMinute] = startTime.split(":");
-        bookingStartDate.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
+        bookingStartDate.setHours(
+          parseInt(startHour),
+          parseInt(startMinute),
+          0,
+          0
+        );
 
         const bookingEndDate = new Date(endDate);
         const [endHour, endMinute] = endTime.split(":");
@@ -166,7 +223,9 @@ export const BookingsManager = () => {
         });
       }
 
-      const { error } = await supabase.from("bookings").insert(bookingsToCreate);
+      const { error } = await supabase
+        .from("bookings")
+        .insert(bookingsToCreate);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -181,10 +240,14 @@ export const BookingsManager = () => {
       setIsRecurring(false);
       setRecurringEndDate("");
       setSelectedDays([]);
-      toast({ title: isRecurring ? "Recurring bookings created successfully" : "Booking created successfully" });
+      toast({
+        title: isRecurring
+          ? "Recurring bookings created successfully"
+          : "Booking created successfully",
+      });
     },
     onError: (error: any) => {
-      const message = error.message.includes("overlaps") 
+      const message = error.message.includes("overlaps")
         ? "This time slot is already booked. Please choose a different time."
         : error.message;
       toast({
@@ -198,7 +261,10 @@ export const BookingsManager = () => {
   const deleteBooking = useMutation({
     mutationFn: async (ids: string | string[]) => {
       const idsToDelete = Array.isArray(ids) ? ids : [ids];
-      const { error } = await supabase.from("bookings").delete().in("id", idsToDelete);
+      const { error } = await supabase
+        .from("bookings")
+        .delete()
+        .in("id", idsToDelete);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -220,7 +286,9 @@ export const BookingsManager = () => {
       <Card>
         <CardHeader>
           <CardTitle>Create New Booking</CardTitle>
-          <CardDescription>Book a room for a specific time period</CardDescription>
+          <CardDescription>
+            Book a room for a specific time period
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -262,7 +330,9 @@ export const BookingsManager = () => {
                 <Checkbox
                   id="recurring"
                   checked={isRecurring}
-                  onCheckedChange={(checked) => setIsRecurring(checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    setIsRecurring(checked as boolean)
+                  }
                 />
                 <Label htmlFor="recurring" className="cursor-pointer">
                   Create recurring weekly bookings
@@ -275,24 +345,31 @@ export const BookingsManager = () => {
                 <div className="space-y-2">
                   <Label>Select Days of Week</Label>
                   <div className="flex flex-wrap gap-2">
-                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`day-${index}`}
-                          checked={selectedDays.includes(index)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedDays([...selectedDays, index]);
-                            } else {
-                              setSelectedDays(selectedDays.filter((d) => d !== index));
-                            }
-                          }}
-                        />
-                        <Label htmlFor={`day-${index}`} className="cursor-pointer">
-                          {day}
-                        </Label>
-                      </div>
-                    ))}
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                      (day, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`day-${index}`}
+                            checked={selectedDays.includes(index)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedDays([...selectedDays, index]);
+                              } else {
+                                setSelectedDays(
+                                  selectedDays.filter((d) => d !== index)
+                                );
+                              }
+                            }}
+                          />
+                          <Label
+                            htmlFor={`day-${index}`}
+                            className="cursor-pointer"
+                          >
+                            {day}
+                          </Label>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
 
@@ -311,7 +388,9 @@ export const BookingsManager = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="start-date">{isRecurring ? "First Booking Date" : "Start Date"}</Label>
+                <Label htmlFor="start-date">
+                  {isRecurring ? "First Booking Date" : "Start Date"}
+                </Label>
                 <Input
                   id="start-date"
                   type="date"
@@ -370,7 +449,11 @@ export const BookingsManager = () => {
               </div>
             )}
 
-            <Button type="submit" disabled={addBooking.isPending} className="gap-2">
+            <Button
+              type="submit"
+              disabled={addBooking.isPending}
+              className="gap-2"
+            >
               <Plus className="w-4 h-4" />
               Create Booking
             </Button>
@@ -422,9 +505,14 @@ export const BookingsManager = () => {
                       <TableBody>
                         {bookings?.filter((b) => {
                           if (!b.isRecurring) {
-                            const matchesSearch = searchQuery.toLowerCase() === "" ||
-                              b.rooms?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                            const matchesSearch =
+                              searchQuery.toLowerCase() === "" ||
+                              b.rooms?.name
+                                ?.toLowerCase()
+                                .includes(searchQuery.toLowerCase()) ||
+                              b.booker_name
+                                ?.toLowerCase()
+                                .includes(searchQuery.toLowerCase());
                             return matchesSearch;
                           }
                           return false;
@@ -432,17 +520,36 @@ export const BookingsManager = () => {
                           bookings
                             .filter((b) => {
                               if (!b.isRecurring) {
-                                const matchesSearch = searchQuery.toLowerCase() === "" ||
-                                  b.rooms?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                  b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                                const matchesSearch =
+                                  searchQuery.toLowerCase() === "" ||
+                                  b.rooms?.name
+                                    ?.toLowerCase()
+                                    .includes(searchQuery.toLowerCase()) ||
+                                  b.booker_name
+                                    ?.toLowerCase()
+                                    .includes(searchQuery.toLowerCase());
                                 return matchesSearch;
                               }
                               return false;
                             })
                             .map((booking) => {
-                              const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                              const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
-                              const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
+                              const weekdayNames = [
+                                "Sun",
+                                "Mon",
+                                "Tue",
+                                "Wed",
+                                "Thu",
+                                "Fri",
+                                "Sat",
+                              ];
+                              const startTime = toZonedTime(
+                                new Date(booking.start_time),
+                                TIMEZONE
+                              );
+                              const endTime = toZonedTime(
+                                new Date(booking.end_time),
+                                TIMEZONE
+                              );
 
                               return (
                                 <TableRow key={booking.id}>
@@ -450,14 +557,23 @@ export const BookingsManager = () => {
                                     <div className="flex items-center gap-2">
                                       <div
                                         className="w-3 h-3 rounded"
-                                        style={{ backgroundColor: booking.rooms?.color }}
+                                        style={{
+                                          backgroundColor: booking.rooms?.color,
+                                        }}
                                       />
-                                      <span className="font-medium">{booking.rooms?.name}</span>
+                                      <span className="font-medium">
+                                        {booking.rooms?.name}
+                                      </span>
                                     </div>
                                   </TableCell>
-                                  <TableCell>{booking.booker_name || "—"}</TableCell>
                                   <TableCell>
-                                    <Badge variant="outline" className="text-xs">
+                                    {booking.booker_name || "—"}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
                                       {weekdayNames[startTime.getDay()]}
                                     </Badge>
                                   </TableCell>
@@ -480,15 +596,23 @@ export const BookingsManager = () => {
                                       </AlertDialogTrigger>
                                       <AlertDialogContent>
                                         <AlertDialogHeader>
-                                          <AlertDialogTitle>Delete Booking</AlertDialogTitle>
+                                          <AlertDialogTitle>
+                                            Delete Booking
+                                          </AlertDialogTitle>
                                           <AlertDialogDescription>
-                                            Are you sure you want to delete this booking? This action cannot be undone.
+                                            Are you sure you want to delete this
+                                            booking? This action cannot be
+                                            undone.
                                           </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogCancel>
+                                            Cancel
+                                          </AlertDialogCancel>
                                           <AlertDialogAction
-                                            onClick={() => deleteBooking.mutate(booking.id)}
+                                            onClick={() =>
+                                              deleteBooking.mutate(booking.id)
+                                            }
                                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                           >
                                             Delete
@@ -502,7 +626,10 @@ export const BookingsManager = () => {
                             })
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            <TableCell
+                              colSpan={6}
+                              className="text-center py-8 text-muted-foreground"
+                            >
                               No individual bookings found
                             </TableCell>
                           </TableRow>
@@ -529,9 +656,14 @@ export const BookingsManager = () => {
                       <TableBody>
                         {bookings?.filter((b) => {
                           if (b.isRecurring) {
-                            const matchesSearch = searchQuery.toLowerCase() === "" ||
-                              b.rooms?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                            const matchesSearch =
+                              searchQuery.toLowerCase() === "" ||
+                              b.rooms?.name
+                                ?.toLowerCase()
+                                .includes(searchQuery.toLowerCase()) ||
+                              b.booker_name
+                                ?.toLowerCase()
+                                .includes(searchQuery.toLowerCase());
                             return matchesSearch;
                           }
                           return false;
@@ -539,47 +671,83 @@ export const BookingsManager = () => {
                           bookings
                             .filter((b) => {
                               if (b.isRecurring) {
-                                const matchesSearch = searchQuery.toLowerCase() === "" ||
-                                  b.rooms?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                  b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                                const matchesSearch =
+                                  searchQuery.toLowerCase() === "" ||
+                                  b.rooms?.name
+                                    ?.toLowerCase()
+                                    .includes(searchQuery.toLowerCase()) ||
+                                  b.booker_name
+                                    ?.toLowerCase()
+                                    .includes(searchQuery.toLowerCase());
                                 return matchesSearch;
                               }
                               return false;
                             })
                             .map((booking) => {
-                              const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                              const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
-                              const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
+                              const weekdayNames = [
+                                "Sun",
+                                "Mon",
+                                "Tue",
+                                "Wed",
+                                "Thu",
+                                "Fri",
+                                "Sat",
+                              ];
+                              const startTime = toZonedTime(
+                                new Date(booking.start_time),
+                                TIMEZONE
+                              );
+                              const endTime = toZonedTime(
+                                new Date(booking.end_time),
+                                TIMEZONE
+                              );
 
                               return (
-                                <TableRow key={booking.id} className="bg-primary/5">
+                                <TableRow
+                                  key={booking.id}
+                                  className="bg-primary/5"
+                                >
                                   <TableCell>
                                     <div className="flex items-center gap-2">
                                       <div
                                         className="w-3 h-3 rounded"
-                                        style={{ backgroundColor: booking.rooms?.color }}
+                                        style={{
+                                          backgroundColor: booking.rooms?.color,
+                                        }}
                                       />
-                                      <span className="font-medium">{booking.rooms?.name}</span>
+                                      <span className="font-medium">
+                                        {booking.rooms?.name}
+                                      </span>
                                     </div>
                                   </TableCell>
-                                  <TableCell>{booking.booker_name || "—"}</TableCell>
+                                  <TableCell>
+                                    {booking.booker_name || "—"}
+                                  </TableCell>
                                   <TableCell>
                                     <div className="flex flex-wrap gap-1">
                                       {booking.weekdays?.map((day: number) => (
-                                        <Badge key={day} variant="outline" className="text-xs">
+                                        <Badge
+                                          key={day}
+                                          variant="outline"
+                                          className="text-xs"
+                                        >
                                           {weekdayNames[day]}
                                         </Badge>
                                       ))}
                                     </div>
                                   </TableCell>
                                   <TableCell className="text-sm">
-                                    {format(startTime, "HH:mm")} - {format(startTime, "HH:mm").split(':').map((v, i) => i === 0 ? String((parseInt(v) + 1) % 24).padStart(2, '0') : v).join(':')}
+                                    {format(startTime, "HH:mm")} -{" "}
+                                    {format(endTime, "HH:mm")}
                                   </TableCell>
                                   <TableCell className="text-sm">
                                     {format(endTime, "MMM d")}
                                   </TableCell>
                                   <TableCell>
-                                    <Badge variant="secondary" className="gap-1">
+                                    <Badge
+                                      variant="secondary"
+                                      className="gap-1"
+                                    >
                                       <Repeat className="w-3 h-3" />
                                       {booking.recurringCount}
                                     </Badge>
@@ -597,15 +765,26 @@ export const BookingsManager = () => {
                                       </AlertDialogTrigger>
                                       <AlertDialogContent>
                                         <AlertDialogHeader>
-                                          <AlertDialogTitle>Delete Weekly Series</AlertDialogTitle>
+                                          <AlertDialogTitle>
+                                            Delete Weekly Series
+                                          </AlertDialogTitle>
                                           <AlertDialogDescription>
-                                            Are you sure you want to delete all {booking.recurringCount} bookings in this weekly series? This action cannot be undone.
+                                            Are you sure you want to delete all{" "}
+                                            {booking.recurringCount} bookings in
+                                            this weekly series? This action
+                                            cannot be undone.
                                           </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogCancel>
+                                            Cancel
+                                          </AlertDialogCancel>
                                           <AlertDialogAction
-                                            onClick={() => deleteBooking.mutate(booking.recurringIds)}
+                                            onClick={() =>
+                                              deleteBooking.mutate(
+                                                booking.recurringIds
+                                              )
+                                            }
                                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                           >
                                             Delete All
@@ -619,7 +798,10 @@ export const BookingsManager = () => {
                             })
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            <TableCell
+                              colSpan={7}
+                              className="text-center py-8 text-muted-foreground"
+                            >
                               No weekly series found
                             </TableCell>
                           </TableRow>
