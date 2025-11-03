@@ -3,9 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Calendar, QrCode } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Calendar, QrCode, Clock, TrendingUp } from "lucide-react";
 import { WeeklyCalendar } from "@/components/WeeklyCalendar";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
@@ -16,6 +18,7 @@ const RoomDetail = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const queryClient = useQueryClient();
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
 
   const { data: room, isLoading: roomLoading } = useQuery({
     queryKey: ["room", roomId],
@@ -99,20 +102,72 @@ const RoomDetail = () => {
     );
   }
 
+  const now = new Date();
+  const activeBookings = bookings?.filter(
+    (b) => new Date(b.start_time) <= now && new Date(b.end_time) >= now
+  ).length || 0;
+  const upcomingBookings = bookings?.filter(
+    (b) => new Date(b.start_time) > now
+  ).length || 0;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center gap-4 mb-4">
-            <Link to="/">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-foreground">{room.name}</h1>
-              <p className="text-muted-foreground mt-1">{room.description}</p>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Link to="/">
+                <Button variant="ghost" size="icon">
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">{room.name}</h1>
+                <p className="text-muted-foreground mt-1">{room.description}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {/* Room Stats */}
+              <div className="flex items-center gap-3 px-4 py-2 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-success" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Active Now</p>
+                    <p className="text-sm font-semibold">{activeBookings}</p>
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-border" />
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-warning" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Upcoming</p>
+                    <p className="text-sm font-semibold">{upcomingBookings}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* QR Code Dialog */}
+              <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <QrCode className="w-4 h-4" />
+                    View QR Code
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Room QR Code</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex flex-col items-center gap-4 py-4">
+                    <canvas ref={qrCanvasRef} className="border rounded-lg p-4" />
+                    <p className="text-sm text-muted-foreground text-center">
+                      Scan this QR code to quickly access this room's booking page
+                    </p>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
@@ -120,48 +175,7 @@ const RoomDetail = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Weekly Calendar View */}
-          <div className="lg:col-span-2 space-y-6">
-            <WeeklyCalendar bookings={bookings || []} />
-          </div>
-
-          {/* QR Code Sidebar */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <QrCode className="w-5 h-5" />
-                  QR Code
-                </CardTitle>
-                <CardDescription>
-                  Scan to book this room
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                <canvas ref={qrCanvasRef} className="border rounded-lg p-4" />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Room Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Bookings</span>
-                    <span className="font-semibold">{bookings?.length || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Available Slots</span>
-                    <span className="font-semibold text-success">Open</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <WeeklyCalendar bookings={bookings || []} />
       </main>
     </div>
   );

@@ -253,7 +253,7 @@ const Index = () => {
                   <TableHead>Booker</TableHead>
                   <TableHead>Schedule</TableHead>
                   <TableHead>Time</TableHead>
-                  <TableHead>End Date</TableHead>
+                  <TableHead>End Time</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -300,9 +300,9 @@ const Index = () => {
                               ))}
                             </div>
                           ) : (
-                            <span className="text-sm">
-                              {format(startTime, "MMM dd, yyyy")}
-                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {weekdayNames[startTime.getDay()]}
+                            </Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-sm">
@@ -319,12 +319,8 @@ const Index = () => {
                             </div>
                           )}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {booking.isRecurring ? (
-                            format(endTime, "MMM dd, yyyy")
-                          ) : (
-                            format(endTime, "MMM dd, yyyy")
-                          )}
+                        <TableCell className="text-sm">
+                          {format(endTime, "MMM d, HH:mm")}
                         </TableCell>
                         <TableCell>
                           <span

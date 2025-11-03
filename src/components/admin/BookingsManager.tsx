@@ -391,7 +391,6 @@ export const BookingsManager = () => {
                   <TableHead>Booker</TableHead>
                   <TableHead>Schedule</TableHead>
                   <TableHead>Start Time</TableHead>
-                  <TableHead>End Date</TableHead>
                   <TableHead>End Time</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -438,19 +437,16 @@ export const BookingsManager = () => {
                               ))}
                             </div>
                           ) : (
-                            <span className="text-sm text-muted-foreground">
-                              {format(startTime, "MMM dd")}
-                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {weekdayNames[startTime.getDay()]}
+                            </Badge>
                           )}
                         </TableCell>
                         <TableCell>
                           {format(startTime, "MMM d, HH:mm")}
                         </TableCell>
                         <TableCell>
-                          {format(endTime, "MMM d, yyyy")}
-                        </TableCell>
-                        <TableCell>
-                          {format(endTime, "HH:mm")}
+                          {format(endTime, "MMM d, HH:mm")}
                         </TableCell>
                         <TableCell>
                           <Button
@@ -468,7 +464,7 @@ export const BookingsManager = () => {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                       No upcoming bookings
                     </TableCell>
                   </TableRow>
