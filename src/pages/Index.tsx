@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { RoomCard } from "@/components/RoomCard";
-import { Loader2, CalendarDays, Users, Clock, LogOut, Shield, Repeat } from "lucide-react";
+import { Loader2, CalendarDays, Users, Clock, LogOut, Shield, Repeat, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { format, isSameDay } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 import type { Session } from "@supabase/supabase-js";
@@ -17,6 +19,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -245,108 +248,203 @@ const Index = () => {
         {/* All Bookings Table */}
         <section className="mb-12">
           <h2 className="text-3xl font-bold mb-6">All Bookings</h2>
-          <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Booker</TableHead>
-                  <TableHead>Schedule</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>End Time</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bookings && bookings.length > 0 ? (
-                  bookings.map((booking: any) => {
-                    const now = new Date();
-                    const startTime = new Date(booking.start_time);
-                    const endTime = new Date(booking.end_time);
-                    const isActive = !booking.isRecurring && startTime <= now && endTime >= now;
-                    const isUpcoming = startTime > now;
-                    
-                    const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+          <div className="bg-card rounded-xl shadow-lg border border-border p-6">
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by room or booker name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
 
-                    return (
-                      <TableRow key={booking.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: booking.room?.color }}
-                            />
-                            <span className="font-medium">{booking.room?.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {booking.booker_name || "—"}
-                            {booking.isRecurring && (
-                              <Badge variant="secondary" className="gap-1">
-                                <Repeat className="w-3 h-3" />
-                                {booking.recurringCount}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {booking.isRecurring ? (
-                            <div className="flex flex-wrap gap-1">
-                              {booking.weekdays.map((day: number) => (
-                                <Badge key={day} variant="outline" className="text-xs">
-                                  {weekdayNames[day]}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <Badge variant="outline" className="text-xs">
-                              {weekdayNames[startTime.getDay()]}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {booking.isRecurring ? (
-                            <div>
-                              {format(toZonedTime(new Date(booking.start_time), TIMEZONE), "HH:mm")} -{" "}
-                              {format(toZonedTime(new Date(booking.start_time), TIMEZONE).setHours(
-                                toZonedTime(new Date(booking.start_time), TIMEZONE).getHours() + 1
-                              ), "HH:mm")}
-                            </div>
-                          ) : (
-                            <div>
-                              {format(startTime, "HH:mm")} - {format(endTime, "HH:mm")}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {format(endTime, "MMM d, HH:mm")}
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              isActive
-                                ? "bg-success/10 text-success"
-                                : isUpcoming || booking.isRecurring
-                                ? "bg-warning/10 text-warning"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {isActive ? "Active" : (isUpcoming || booking.isRecurring) ? "Upcoming" : "Past"}
-                          </span>
-                        </TableCell>
+            <Tabs defaultValue="normal" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="normal">Individual Bookings</TabsTrigger>
+                <TabsTrigger value="recurring">Weekly Series</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="normal">
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Room</TableHead>
+                        <TableHead>Booker</TableHead>
+                        <TableHead>Day</TableHead>
+                        <TableHead>Start Time</TableHead>
+                        <TableHead>End Time</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      No bookings yet
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {bookings?.filter((b: any) => {
+                        if (!b.isRecurring) {
+                          const matchesSearch = searchQuery.toLowerCase() === "" ||
+                            b.room?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                          return matchesSearch;
+                        }
+                        return false;
+                      }).length > 0 ? (
+                        bookings
+                          .filter((b: any) => {
+                            if (!b.isRecurring) {
+                              const matchesSearch = searchQuery.toLowerCase() === "" ||
+                                b.room?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                              return matchesSearch;
+                            }
+                            return false;
+                          })
+                          .map((booking: any) => {
+                            const now = new Date();
+                            const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
+                            const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
+                            const isActive = startTime <= now && endTime >= now;
+                            const isUpcoming = startTime > now;
+                            const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+                            return (
+                              <TableRow key={booking.id}>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="w-3 h-3 rounded-full"
+                                      style={{ backgroundColor: booking.room?.color }}
+                                    />
+                                    <span className="font-medium">{booking.room?.name}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>{booking.booker_name || "—"}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-xs">
+                                    {weekdayNames[startTime.getDay()]}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {format(startTime, "MMM d, HH:mm")}
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {format(endTime, "MMM d, HH:mm")}
+                                </TableCell>
+                                <TableCell>
+                                  <span
+                                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      isActive
+                                        ? "bg-success/10 text-success"
+                                        : isUpcoming
+                                        ? "bg-warning/10 text-warning"
+                                        : "bg-muted text-muted-foreground"
+                                    }`}
+                                  >
+                                    {isActive ? "Active" : isUpcoming ? "Upcoming" : "Past"}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            No individual bookings found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="recurring">
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Room</TableHead>
+                        <TableHead>Booker</TableHead>
+                        <TableHead>Weekdays</TableHead>
+                        <TableHead>Time Slot</TableHead>
+                        <TableHead>End Date</TableHead>
+                        <TableHead>Count</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {bookings?.filter((b: any) => {
+                        if (b.isRecurring) {
+                          const matchesSearch = searchQuery.toLowerCase() === "" ||
+                            b.room?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                          return matchesSearch;
+                        }
+                        return false;
+                      }).length > 0 ? (
+                        bookings
+                          .filter((b: any) => {
+                            if (b.isRecurring) {
+                              const matchesSearch = searchQuery.toLowerCase() === "" ||
+                                b.room?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                              return matchesSearch;
+                            }
+                            return false;
+                          })
+                          .map((booking: any) => {
+                            const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                            const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
+                            const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
+
+                            return (
+                              <TableRow key={booking.id} className="bg-primary/5">
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="w-3 h-3 rounded-full"
+                                      style={{ backgroundColor: booking.room?.color }}
+                                    />
+                                    <span className="font-medium">{booking.room?.name}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>{booking.booker_name || "—"}</TableCell>
+                                <TableCell>
+                                  <div className="flex flex-wrap gap-1">
+                                    {booking.weekdays?.map((day: number) => (
+                                      <Badge key={day} variant="outline" className="text-xs">
+                                        {weekdayNames[day]}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {format(startTime, "HH:mm")} - {format(startTime, "HH:mm").split(':').map((v, i) => i === 0 ? String((parseInt(v) + 1) % 24).padStart(2, '0') : v).join(':')}
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {format(endTime, "MMM d")}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary" className="gap-1">
+                                    <Repeat className="w-3 h-3" />
+                                    {booking.recurringCount}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            No weekly series found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </section>
       </div>

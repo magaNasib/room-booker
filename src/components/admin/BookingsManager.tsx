@@ -9,8 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus, Repeat } from "lucide-react";
+import { Trash2, Plus, Repeat, Search } from "lucide-react";
 import { format, addDays, addWeeks, startOfWeek, isBefore, isAfter, isSameDay } from "date-fns";
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
 
@@ -26,6 +28,7 @@ export const BookingsManager = () => {
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringEndDate, setRecurringEndDate] = useState("");
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -384,93 +387,249 @@ export const BookingsManager = () => {
           {isLoading ? (
             <p className="text-muted-foreground">Loading bookings...</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Booker</TableHead>
-                  <TableHead>Schedule</TableHead>
-                  <TableHead>Start Time</TableHead>
-                  <TableHead>End Time</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bookings && bookings.length > 0 ? (
-                  bookings.map((booking) => {
-                    const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-                    const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
-                    const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
-                    
-                    return (
-                      <TableRow 
-                        key={booking.id}
-                        className={booking.isRecurring ? "bg-primary/5" : ""}
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-3 h-3 rounded"
-                              style={{ backgroundColor: booking.rooms?.color }}
-                            />
-                            <span className="font-medium">{booking.rooms?.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {booking.booker_name || "—"}
-                            {booking.isRecurring && (
-                              <Badge variant="secondary" className="gap-1 text-xs">
-                                <Repeat className="w-3 h-3" />
-                                {booking.recurringCount}
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {booking.isRecurring ? (
-                            <div className="flex flex-wrap gap-1">
-                              {booking.weekdays.map((day: number) => (
-                                <Badge key={day} variant="outline" className="text-xs">
-                                  {weekdayNames[day]}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <Badge variant="outline" className="text-xs">
-                              {weekdayNames[startTime.getDay()]}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {format(startTime, "MMM d, HH:mm")}
-                        </TableCell>
-                        <TableCell>
-                          {format(endTime, "MMM d, HH:mm")}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => deleteBooking.mutate(booking.recurringIds || booking.id)}
-                            disabled={deleteBooking.isPending}
-                            title={booking.isRecurring ? "Delete all recurring bookings" : "Delete booking"}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      No upcoming bookings
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <>
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by room or booker name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <Tabs defaultValue="normal" className="w-full">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="normal">Individual Bookings</TabsTrigger>
+                  <TabsTrigger value="recurring">Weekly Series</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="normal">
+                  <div className="rounded-lg border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Room</TableHead>
+                          <TableHead>Booker</TableHead>
+                          <TableHead>Day</TableHead>
+                          <TableHead>Start Time</TableHead>
+                          <TableHead>End Time</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {bookings?.filter((b) => {
+                          if (!b.isRecurring) {
+                            const matchesSearch = searchQuery.toLowerCase() === "" ||
+                              b.rooms?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                            return matchesSearch;
+                          }
+                          return false;
+                        }).length > 0 ? (
+                          bookings
+                            .filter((b) => {
+                              if (!b.isRecurring) {
+                                const matchesSearch = searchQuery.toLowerCase() === "" ||
+                                  b.rooms?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                  b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                                return matchesSearch;
+                              }
+                              return false;
+                            })
+                            .map((booking) => {
+                              const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                              const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
+                              const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
+
+                              return (
+                                <TableRow key={booking.id}>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="w-3 h-3 rounded"
+                                        style={{ backgroundColor: booking.rooms?.color }}
+                                      />
+                                      <span className="font-medium">{booking.rooms?.name}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{booking.booker_name || "—"}</TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className="text-xs">
+                                      {weekdayNames[startTime.getDay()]}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-sm">
+                                    {format(startTime, "MMM d, HH:mm")}
+                                  </TableCell>
+                                  <TableCell className="text-sm">
+                                    {format(endTime, "MMM d, HH:mm")}
+                                  </TableCell>
+                                  <TableCell>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          variant="destructive"
+                                          size="sm"
+                                          disabled={deleteBooking.isPending}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete Booking</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to delete this booking? This action cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => deleteBooking.mutate(booking.id)}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          >
+                                            Delete
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              No individual bookings found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="recurring">
+                  <div className="rounded-lg border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Room</TableHead>
+                          <TableHead>Booker</TableHead>
+                          <TableHead>Weekdays</TableHead>
+                          <TableHead>Time Slot</TableHead>
+                          <TableHead>End Date</TableHead>
+                          <TableHead>Count</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {bookings?.filter((b) => {
+                          if (b.isRecurring) {
+                            const matchesSearch = searchQuery.toLowerCase() === "" ||
+                              b.rooms?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                            return matchesSearch;
+                          }
+                          return false;
+                        }).length > 0 ? (
+                          bookings
+                            .filter((b) => {
+                              if (b.isRecurring) {
+                                const matchesSearch = searchQuery.toLowerCase() === "" ||
+                                  b.rooms?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                  b.booker_name?.toLowerCase().includes(searchQuery.toLowerCase());
+                                return matchesSearch;
+                              }
+                              return false;
+                            })
+                            .map((booking) => {
+                              const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                              const startTime = toZonedTime(new Date(booking.start_time), TIMEZONE);
+                              const endTime = toZonedTime(new Date(booking.end_time), TIMEZONE);
+
+                              return (
+                                <TableRow key={booking.id} className="bg-primary/5">
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="w-3 h-3 rounded"
+                                        style={{ backgroundColor: booking.rooms?.color }}
+                                      />
+                                      <span className="font-medium">{booking.rooms?.name}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{booking.booker_name || "—"}</TableCell>
+                                  <TableCell>
+                                    <div className="flex flex-wrap gap-1">
+                                      {booking.weekdays?.map((day: number) => (
+                                        <Badge key={day} variant="outline" className="text-xs">
+                                          {weekdayNames[day]}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-sm">
+                                    {format(startTime, "HH:mm")} - {format(startTime, "HH:mm").split(':').map((v, i) => i === 0 ? String((parseInt(v) + 1) % 24).padStart(2, '0') : v).join(':')}
+                                  </TableCell>
+                                  <TableCell className="text-sm">
+                                    {format(endTime, "MMM d")}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="secondary" className="gap-1">
+                                      <Repeat className="w-3 h-3" />
+                                      {booking.recurringCount}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          variant="destructive"
+                                          size="sm"
+                                          disabled={deleteBooking.isPending}
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete Weekly Series</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to delete all {booking.recurringCount} bookings in this weekly series? This action cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => deleteBooking.mutate(booking.recurringIds)}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          >
+                                            Delete All
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              No weekly series found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </>
           )}
         </CardContent>
       </Card>
