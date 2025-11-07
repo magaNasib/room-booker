@@ -50,13 +50,13 @@ const RoomDetail = () => {
   });
 
 
-  // Generate QR code
+  // Generate QR code when dialog opens
   useEffect(() => {
-    if (qrCanvasRef.current && roomId) {
+    if (qrDialogOpen && qrCanvasRef.current && roomId) {
       const url = window.location.href;
       QRCode.toCanvas(qrCanvasRef.current, url, { width: 200 });
     }
-  }, [roomId]);
+  }, [qrDialogOpen, roomId]);
 
   // Real-time subscription
   useEffect(() => {
