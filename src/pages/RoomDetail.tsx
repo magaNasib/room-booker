@@ -53,8 +53,22 @@ const RoomDetail = () => {
   // Generate QR code when dialog opens
   useEffect(() => {
     if (qrDialogOpen && qrCanvasRef.current && roomId) {
-      const url = window.location.href;
-      QRCode.toCanvas(qrCanvasRef.current, url, { width: 200 });
+      // Small delay to ensure canvas is ready in DOM
+      const timer = setTimeout(() => {
+        const url = window.location.href;
+        QRCode.toCanvas(qrCanvasRef.current, url, { 
+          width: 256,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        }).catch(error => {
+          console.error('QR Code generation failed:', error);
+        });
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
   }, [qrDialogOpen, roomId]);
 
@@ -160,9 +174,11 @@ const RoomDetail = () => {
                   <DialogHeader>
                     <DialogTitle>Room QR Code</DialogTitle>
                   </DialogHeader>
-                  <div className="flex flex-col items-center gap-4 py-4">
-                    <canvas ref={qrCanvasRef} className="border rounded-lg p-4" />
-                    <p className="text-sm text-muted-foreground text-center">
+                  <div className="flex flex-col items-center gap-4 py-6">
+                    <div className="bg-white p-4 rounded-lg border">
+                      <canvas ref={qrCanvasRef} />
+                    </div>
+                    <p className="text-sm text-muted-foreground text-center max-w-xs">
                       Scan this QR code to quickly access this room's booking page
                     </p>
                   </div>
