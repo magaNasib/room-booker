@@ -67,18 +67,18 @@ const Admin = () => {
           </p>
         </div>
 
-        <Tabs defaultValue="rooms" className="space-y-6">
+        <Tabs defaultValue="bookings" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="rooms">Rooms</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="rooms">Rooms</TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="rooms">
-            <RoomsManager />
-          </TabsContent>
           
           <TabsContent value="bookings">
             <BookingsManager />
+          </TabsContent>
+          
+          <TabsContent value="rooms">
+            <RoomsManager />
           </TabsContent>
         </Tabs>
       </div>
