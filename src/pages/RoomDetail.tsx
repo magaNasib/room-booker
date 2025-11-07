@@ -2,8 +2,20 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar, QrCode, Clock, TrendingUp } from "lucide-react";
 import { WeeklyCalendar } from "@/components/WeeklyCalendar";
@@ -19,6 +31,7 @@ const RoomDetail = () => {
   const queryClient = useQueryClient();
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
   const { data: room, isLoading: roomLoading } = useQuery({
     queryKey: ["room", roomId],
@@ -28,7 +41,7 @@ const RoomDetail = () => {
         .select("*")
         .eq("id", roomId)
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -43,36 +56,26 @@ const RoomDetail = () => {
         .eq("room_id", roomId)
         .gte("end_time", new Date().toISOString())
         .order("start_time");
-      
+
       if (error) throw error;
       return data;
     },
   });
 
-
-  // Generate QR code when dialog opens
   useEffect(() => {
-    if (qrDialogOpen && qrCanvasRef.current && roomId) {
-      // Small delay to ensure canvas is ready in DOM
-      const timer = setTimeout(() => {
-        const url = window.location.href;
-        QRCode.toCanvas(qrCanvasRef.current, url, { 
-          width: 256,
-          margin: 2,
-          color: {
-            dark: '#000000',
-            light: '#FFFFFF'
-          }
-        }).catch(error => {
-          console.error('QR Code generation failed:', error);
-        });
-      }, 100);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [qrDialogOpen, roomId]);
+    if (roomId) {
+      const url = window.location.href;
 
-  // Real-time subscription
+      QRCode.toDataURL(url, { width: 200 })
+        .then((dataUrl) => {
+          setQrDataUrl(dataUrl);
+        })
+        .catch((err) => {
+          console.error("Error generating QR code:", err);
+        });
+    }
+  }, [roomId]);
+
   useEffect(() => {
     const channel = supabase
       .channel(`bookings-${roomId}`)
@@ -85,7 +88,9 @@ const RoomDetail = () => {
           filter: `room_id=eq.${roomId}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["room-bookings", roomId] });
+          queryClient.invalidateQueries({
+            queryKey: ["room-bookings", roomId],
+          });
         }
       )
       .subscribe();
@@ -98,7 +103,9 @@ const RoomDetail = () => {
   if (roomLoading || bookingsLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading room details...</div>
+        <div className="animate-pulse text-muted-foreground">
+          Loading room details...
+        </div>
       </div>
     );
   }
@@ -107,7 +114,9 @@ const RoomDetail = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-foreground mb-2">Room not found</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-2">
+            Room not found
+          </h2>
           <Link to="/">
             <Button>Back to Rooms</Button>
           </Link>
@@ -117,12 +126,12 @@ const RoomDetail = () => {
   }
 
   const now = new Date();
-  const activeBookings = bookings?.filter(
-    (b) => new Date(b.start_time) <= now && new Date(b.end_time) >= now
-  ).length || 0;
-  const upcomingBookings = bookings?.filter(
-    (b) => new Date(b.start_time) > now
-  ).length || 0;
+  const activeBookings =
+    bookings?.filter(
+      (b) => new Date(b.start_time) <= now && new Date(b.end_time) >= now
+    ).length || 0;
+  const upcomingBookings =
+    bookings?.filter((b) => new Date(b.start_time) > now).length || 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -137,11 +146,13 @@ const RoomDetail = () => {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-3xl font-bold text-foreground">{room.name}</h1>
+                <h1 className="text-3xl font-bold text-foreground">
+                  {room.name}
+                </h1>
                 <p className="text-muted-foreground mt-1">{room.description}</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               {/* Room Stats */}
               <div className="flex items-center gap-3 px-4 py-2 bg-muted/50 rounded-lg">
@@ -174,12 +185,25 @@ const RoomDetail = () => {
                   <DialogHeader>
                     <DialogTitle>Room QR Code</DialogTitle>
                   </DialogHeader>
-                  <div className="flex flex-col items-center gap-4 py-6">
-                    <div className="bg-white p-4 rounded-lg border">
-                      <canvas ref={qrCanvasRef} />
-                    </div>
-                    <p className="text-sm text-muted-foreground text-center max-w-xs">
-                      Scan this QR code to quickly access this room's booking page
+                  <div className="flex flex-col items-center gap-4 py-4">
+                    {qrDataUrl ? (
+                      <img
+                        src={qrDataUrl}
+                        alt="Room QR Code"
+                        className="border rounded-lg p-4"
+                        width={200}
+                        height={200}
+                      />
+                    ) : (
+                      <div className="w-[200px] h-[200px] border rounded-lg p-4 flex items-center justify-center">
+                        <p className="text-sm text-muted-foreground">
+                          Generating QR code...
+                        </p>
+                      </div>
+                    )}
+                    <p className="text-sm text-muted-foreground text-center">
+                      Scan this QR code to quickly access this room's booking
+                      page
                     </p>
                   </div>
                 </DialogContent>
