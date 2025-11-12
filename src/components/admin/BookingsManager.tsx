@@ -386,7 +386,7 @@ export const BookingsManager = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start-date">
                   {isRecurring ? "First Booking Date" : "Start Date"}
@@ -412,7 +412,7 @@ export const BookingsManager = () => {
             </div>
 
             {!isRecurring && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="end-date">End Date</Label>
                   <Input
@@ -490,7 +490,7 @@ export const BookingsManager = () => {
                 </TabsList>
 
                 <TabsContent value="normal">
-                  <div className="rounded-lg border overflow-hidden">
+                  <div className="rounded-lg border overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>

@@ -108,19 +108,20 @@ export const RoomsManager = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="room-color">Color</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   id="room-color"
                   type="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
-                  className="w-20 h-10"
+                  className="w-full sm:w-20 h-10"
                 />
                 <Input
                   type="text"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
                   placeholder="#3B82F6"
+                  className="flex-1"
                 />
               </div>
             </div>
@@ -141,7 +142,8 @@ export const RoomsManager = () => {
           {isLoading ? (
             <p className="text-muted-foreground">Loading rooms...</p>
           ) : (
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Color</TableHead>
@@ -184,7 +186,8 @@ export const RoomsManager = () => {
                   </TableRow>
                 )}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -161,68 +161,70 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <div className="container mx-auto px-4 py-8">
-        <header className="mb-12">
-          <div className="flex justify-between items-center mb-4">
+        <header className="mb-8 md:mb-12">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
             <div>
-              <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-2 md:mb-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
                 Room Booking
               </h1>
-              <p className="text-muted-foreground text-lg max-w-2xl">
+              <p className="text-muted-foreground text-sm md:text-base lg:text-lg max-w-2xl">
                 View available rooms and current bookings. Only admins can
                 create bookings.
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 w-full md:w-auto">
               {session ? (
                 <>
                   {isAdmin && (
                     <Button
                       onClick={() => navigate("/admin")}
                       variant="outline"
-                      className="gap-2"
+                      className="gap-2 flex-1 md:flex-none"
                     >
                       <Shield className="w-4 h-4" />
-                      Admin Panel
+                      <span className="hidden sm:inline">Admin Panel</span>
+                      <span className="sm:hidden">Admin</span>
                     </Button>
                   )}
                   <Button
                     onClick={handleSignOut}
                     variant="outline"
-                    className="gap-2"
+                    className="gap-2 flex-1 md:flex-none"
                   >
                     <LogOut className="w-4 h-4" />
-                    Sign Out
+                    <span className="hidden sm:inline">Sign Out</span>
+                    <span className="sm:hidden">Out</span>
                   </Button>
                 </>
               ) : (
-                <Button onClick={() => navigate("/auth")}>Sign In</Button>
+                <Button onClick={() => navigate("/auth")} className="w-full md:w-auto">Sign In</Button>
               )}
             </div>
           </div>
         </header>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-card rounded-xl shadow-lg p-6 border border-primary/10">
-            <div className="flex items-center gap-4">
-              <div className="bg-primary/10 p-3 rounded-lg">
-                <CalendarDays className="w-6 h-6 text-primary" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12">
+          <div className="bg-card rounded-xl shadow-lg p-4 md:p-6 border border-primary/10">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="bg-primary/10 p-2 md:p-3 rounded-lg">
+                <CalendarDays className="w-5 h-5 md:w-6 md:h-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Rooms</p>
-                <p className="text-2xl font-bold">{rooms?.length || 0}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Total Rooms</p>
+                <p className="text-xl md:text-2xl font-bold">{rooms?.length || 0}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-card rounded-xl shadow-lg p-6 border border-success/10">
-            <div className="flex items-center gap-4">
-              <div className="bg-success/10 p-3 rounded-lg">
-                <Users className="w-6 h-6 text-success" />
+          <div className="bg-card rounded-xl shadow-lg p-4 md:p-6 border border-success/10">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="bg-success/10 p-2 md:p-3 rounded-lg">
+                <Users className="w-5 h-5 md:w-6 md:h-6 text-success" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Active Bookings</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs md:text-sm text-muted-foreground">Active Bookings</p>
+                <p className="text-xl md:text-2xl font-bold">
                   {bookings?.filter(
                     (b: any) =>
                       new Date(b.start_time) <= new Date() &&
@@ -233,14 +235,14 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="bg-card rounded-xl shadow-lg p-6 border border-warning/10">
-            <div className="flex items-center gap-4">
-              <div className="bg-warning/10 p-3 rounded-lg">
-                <Clock className="w-6 h-6 text-warning" />
+          <div className="bg-card rounded-xl shadow-lg p-4 md:p-6 border border-warning/10">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="bg-warning/10 p-2 md:p-3 rounded-lg">
+                <Clock className="w-5 h-5 md:w-6 md:h-6 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Upcoming</p>
-                <p className="text-2xl font-bold">
+                <p className="text-xs md:text-sm text-muted-foreground">Upcoming</p>
+                <p className="text-xl md:text-2xl font-bold">
                   {bookings?.filter(
                     (b: any) => new Date(b.start_time) > new Date()
                   ).length || 0}
@@ -251,9 +253,9 @@ const Index = () => {
         </div>
 
         {/* Rooms Grid */}
-        <section className="mb-12">
-          <h2 className="text-3xl font-bold mb-6">Available Rooms</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <section className="mb-8 md:mb-12">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Available Rooms</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {rooms?.map((room: any) => {
               const roomBookings = bookings?.filter(
                 (booking: any) => booking.room_id === room.id
@@ -270,9 +272,9 @@ const Index = () => {
         </section>
 
         {/* All Bookings Table */}
-        <section className="mb-12">
-          <h2 className="text-3xl font-bold mb-6">All Bookings</h2>
-          <div className="bg-card rounded-xl shadow-lg border border-border p-6">
+        <section className="mb-8 md:mb-12">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">All Bookings</h2>
+          <div className="bg-card rounded-xl shadow-lg border border-border p-4 md:p-6">
             <div className="mb-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -292,7 +294,7 @@ const Index = () => {
               </TabsList>
 
               <TabsContent value="normal">
-                <div className="rounded-lg border overflow-hidden">
+                <div className="rounded-lg border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -421,7 +423,7 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="recurring">
-                <div className="rounded-lg border overflow-hidden">
+                <div className="rounded-lg border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>

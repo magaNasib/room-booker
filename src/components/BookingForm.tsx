@@ -90,7 +90,7 @@ export const BookingForm = ({ existingBookings, onSubmit, isLoading }: BookingFo
       <div className="space-y-4">
         <div className="space-y-2">
           <Label>Start Date & Time</Label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Input
               type="date"
               value={startDate}
@@ -109,7 +109,7 @@ export const BookingForm = ({ existingBookings, onSubmit, isLoading }: BookingFo
 
         <div className="space-y-2">
           <Label>End Date & Time</Label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Input
               type="date"
               value={endDate}

@@ -61,14 +61,14 @@ export const WeeklyCalendar = ({ bookings, currentDate = new Date() }: WeeklyCal
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Weekly Schedule</CardTitle>
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <CardTitle className="text-lg md:text-xl">Weekly Schedule</CardTitle>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               size="sm"
               onClick={goToPreviousWeek}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 shrink-0"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
@@ -77,7 +77,7 @@ export const WeeklyCalendar = ({ bookings, currentDate = new Date() }: WeeklyCal
               size="sm"
               onClick={goToCurrentWeek}
               disabled={weekOffset === 0}
-              className="h-8"
+              className="h-8 flex-1 sm:flex-none"
             >
               Today
             </Button>
@@ -85,18 +85,18 @@ export const WeeklyCalendar = ({ bookings, currentDate = new Date() }: WeeklyCal
               variant="outline"
               size="sm"
               onClick={goToNextWeek}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 shrink-0"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
         </div>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-xs md:text-sm text-muted-foreground mt-1">
           {format(days[0], "MMM d")} - {format(days[6], "MMM d, yyyy")}
         </p>
       </CardHeader>
-      <CardContent className="overflow-x-auto">
-        <div className="min-w-[800px]">
+      <CardContent className="overflow-x-auto p-2 md:p-6">
+        <div className="min-w-[600px] md:min-w-[800px]">
           {/* Header with days */}
           <div className="grid grid-cols-[80px_repeat(7,1fr)] gap-0 border-b">
             <div className="p-2 font-semibold text-sm text-muted-foreground">Time</div>
