@@ -49,7 +49,7 @@ export const WeeklyCalendar = ({ bookings, currentDate = new Date() }: WeeklyCal
     const start = toZonedTime(new Date(booking.start_time), TIMEZONE);
     const end = toZonedTime(new Date(booking.end_time), TIMEZONE);
     const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-    return Math.min(durationHours * 60, 60); // Cap at 60px per hour
+    return durationHours * 60; // 60px per hour
   };
 
   const getBookingTopOffset = (booking: Booking, hour: number) => {
